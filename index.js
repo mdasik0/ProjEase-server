@@ -12,7 +12,7 @@ app.get("/", (req, res) => {
 app.use(cors());
 app.use(express.json());
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = process.env.MONGO_URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -29,19 +29,30 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
-// ? collections
-const tasksCollection = client.db("Projease").collection("tasks");
-
-
+    // ? collections
+    const tasksCollection = client.db("Projease").collection("tasks");
 
     // ! database code start here
+    // ? Task api endpoints here
+    app.post("/tasks", async (req, res) => {
+      const task = req.body;
+      const result = await tasksCollection.insertOne(task);
+      res.send(result);
+    });
 
-    app.post("/tasks", async(req, res) => {
-        const task = req.body;
-        const result = await tasksCollection.insertOne(task);
-        res.send(result);
+    app.patch("/tasks/:id", async (req, res) => {
+      const id = req.params.id;
+      const body = req.body;
+      const query = { _id: ObjectId(id) };
+      const result = await tasksCollection.updateOne(query, body);
+      res.send(result);
+    });
+
+    app.patch("/deleteTask/:id", async (req,res) => {
+        const id = req.params.id;
+        const result = await tasksCollection.deleteOne({_id: ObjectId(id)})
+        res.send(result)
     })
-
 
     // ! database code ends here
     await client.db("admin").command({ ping: 1 });
