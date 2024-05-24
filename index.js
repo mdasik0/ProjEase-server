@@ -8,78 +8,78 @@ app.get("/", (req, res) => {
   res.send("Welcome to Projease");
 });
 
-// middleware
+// Middleware
 app.use(cors());
 app.use(express.json());
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = process.env.MONGO_URI;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-});
-
 async function run() {
+  const client = new MongoClient(uri, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    },
+  });
+
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
-    // Send a ping to confirm a successful connection
-    // ? collections
+    await client.connect();
+
     const tasksCollection = client.db("Projease").collection("tasks");
 
-    // ! database code start here
-    // ? Task api endpoints here
-    app.post("/tasks", async (req, res) => {
-      const task = req.body;
-      const result = await tasksCollection.insertOne(task);
-      if(result?.insertedId) {
-        res.status(200).send(result)
-      } else{
-        res.status(404).send({
-          message: "can't insert task try again later",
-          status: false
-        })
+    // Task API endpoints
+    app.post("/createTasks", async (req, res) => {
+      try {
+        const task = req.body;
+        const result = await tasksCollection.insertOne(task);
+        res.status(201).send(result);
+      } catch (error) {
+        res.status(500).send("Error creating task: " + error.message);
       }
     });
-    
-    app.get("/tasks", async(req,res) => {
-      const result = await tasksCollection.find();
-      res.status(200).send(result)
-    })
 
-    app.patch("/tasks/:id", async (req, res) => {
-      const id = req.params.id;
-      const body = req.body;
-      const query = { _id: ObjectId(id) };
-      const result = await tasksCollection.updateOne(query, body);
-      res.send(result);
+    app.get("/tasks", async (req, res) => {
+      try {
+        const result = await tasksCollection.find().toArray(); // Convert cursor to array
+        res.status(200).send(result);
+      } catch (error) {
+        res.status(500).send("Error fetching tasks: " + error.message);
+      }
     });
 
-    app.patch("/deleteTask/:id", async (req,res) => {
+    app.patch("/tasks/:id", async (req, res) => {
+      try {
         const id = req.params.id;
-        const result = await tasksCollection.deleteOne({_id: ObjectId(id)})
-        res.send(result)
-    })
+        const body = req.body;
+        const query = { _id: ObjectId(id) };
+        const result = await tasksCollection.updateOne(query, { $set: body });
+        res.status(200).send("Task updated successfully");
+      } catch (error) {
+        res.status(500).send("Error updating task: " + error.message);
+      }
+    });
 
-    // ! database code ends here
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
+    app.delete("/tasks/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const result = await tasksCollection.deleteOne({ _id: ObjectId(id) });
+        res.status(200).send("Task deleted successfully");
+      } catch (error) {
+        res.status(500).send("Error deleting task: " + error.message);
+      }
+    });
+
+    console.log("Connected to MongoDB!");
+  } catch (error) {
+    console.error("Failed to connect to MongoDB:", error);
   }
 }
-run().catch(console.dir);
 
-// last middleware function. after this no middleware function should be added
+run().catch(console.error);
 
+// Error handling middleware
 app.use((err, req, res, next) => {
   if (err.message) {
     res.status(500).send(err.message);
