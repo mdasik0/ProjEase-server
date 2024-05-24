@@ -37,8 +37,20 @@ async function run() {
     app.post("/tasks", async (req, res) => {
       const task = req.body;
       const result = await tasksCollection.insertOne(task);
-      res.send(result);
+      if(result?.insertedId) {
+        res.status(200).send(result)
+      } else{
+        res.status(404).send({
+          message: "can't insert task try again later",
+          status: false
+        })
+      }
     });
+    
+    app.get("/tasks", async(req,res) => {
+      const result = await tasksCollection.find();
+      res.status(200).send(result)
+    })
 
     app.patch("/tasks/:id", async (req, res) => {
       const id = req.params.id;
