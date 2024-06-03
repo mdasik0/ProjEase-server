@@ -40,6 +40,49 @@ async function run() {
       }
     });
 
+    app.patch("/updateTaskStatus/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const obj = await tasksCollection.findOne({ _id: new ObjectId(id) });
+
+        if (!obj) {
+          return res.status(404).send({ message: "Task is not found" });
+        }
+
+        let newStatus;
+        if (obj.status === "pending") {
+          newStatus = "in-progress";
+        } else if (obj.status === "in-progress") {
+          newStatus = "completed";
+        } else if (obj.status === "completed") {
+          return res.status(200).send({ message: "Task is already complete" });
+        }
+
+        if (newStatus) {
+          const result = await tasksCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { status: newStatus } }
+          );
+          if (result.modifiedCount === 1) {
+            const result = await tasksCollection.find()
+            const message =
+              newStatus === "in-progress"
+                ? "Task is in progress"
+                : "Task is complete";
+            return res.status(200).send({ message, ... result });
+          } else {
+            return res
+              .status(500)
+              .send({ message: "Failed to update task status" });
+          }
+        }
+      } catch (error) {
+        return res
+          .status(500)
+          .send({ message: "An error occurred", error: error.message });
+      }
+    });
+
     app.get("/tasks", async (req, res) => {
       try {
         const result = await tasksCollection.find().toArray(); // Convert cursor to array
