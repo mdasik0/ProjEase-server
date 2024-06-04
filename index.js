@@ -95,7 +95,9 @@ async function run() {
     app.delete("/deleteTasks/:id", async (req, res) => {
       const id = req.params.id;
       try {
-        const result = await tasksCollection.deleteOne({ _id: new ObjectId(id) });
+        const result = await tasksCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
 
         if (result.deletedCount === 1) {
           res
@@ -106,7 +108,32 @@ async function run() {
             .status(500)
             .send({ message: "There was an error deleting the task" });
       } catch (error) {
-        res.status(500).send("An error occurred at the delete task api endpoint" + error.message)
+        res
+          .status(500)
+          .send(
+            "An error occurred at the delete task api endpoint" + error.message
+          );
+      }
+    });
+
+    app.patch("/createSteps/:id", async (req, res) => {
+      const id = req.params.id;
+      const body = req.body;
+      try {
+        const result = await tasksCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $push: { steps: body } }
+        );
+        if (result.modifiedCount === 1) {
+          res.status(200).send({ message: "steps have been added" });
+        } else
+          res
+            .status(500)
+            .send({ message: "there was an error adding the step" });
+      } catch (error) {
+        res
+          .status(500)
+          .send({ message: "there was an error in the step endpoint" });
       }
     });
 
