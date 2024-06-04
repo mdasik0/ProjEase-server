@@ -64,12 +64,12 @@ async function run() {
             { $set: { status: newStatus } }
           );
           if (result.modifiedCount === 1) {
-            const result = await tasksCollection.find()
+            const result = await tasksCollection.find();
             const message =
               newStatus === "in-progress"
                 ? "Task is in progress"
                 : "Task is complete";
-            return res.status(200).send({ message, ... result });
+            return res.status(200).send({ message, ...result });
           } else {
             return res
               .status(500)
@@ -92,25 +92,21 @@ async function run() {
       }
     });
 
-    app.patch("/tasks/:id", async (req, res) => {
+    app.delete("/deleteTasks/:id", async (req, res) => {
+      const id = req.params.id;
       try {
-        const id = req.params.id;
-        const body = req.body;
-        const query = { _id: ObjectId(id) };
-        const result = await tasksCollection.updateOne(query, { $set: body });
-        res.status(200).send("Task updated successfully");
-      } catch (error) {
-        res.status(500).send("Error updating task: " + error.message);
-      }
-    });
+        const result = await tasksCollection.deleteOne({ _id: new ObjectId(id) });
 
-    app.delete("/tasks/:id", async (req, res) => {
-      try {
-        const id = req.params.id;
-        const result = await tasksCollection.deleteOne({ _id: ObjectId(id) });
-        res.status(200).send("Task deleted successfully");
+        if (result.deletedCount === 1) {
+          res
+            .status(200)
+            .send({ message: "Task has been deleted successfully" });
+        } else
+          res
+            .status(500)
+            .send({ message: "There was an error deleting the task" });
       } catch (error) {
-        res.status(500).send("Error deleting task: " + error.message);
+        res.status(500).send("An error occurred at the delete task api endpoint" + error.message)
       }
     });
 
