@@ -137,6 +137,40 @@ async function run() {
       }
     });
 
+    app.patch("/completeSteps/:id", async (req,res) => {
+      const id = req.params.id;
+      const stepsId = req.body;
+      const idQuery = {_id: new ObjectId(id)}
+      const result = await tasksCollection.updateOne({idQuery,"steps.id": stepsId},{$set: {"steps.$.isCompleted": true}});
+      try {
+        if(result.modifiedCount === 1){
+          res.status(200).send({message: `step ${stepsId} has been completed successfully`});
+        } else {
+          res.status(500).send({message: 'there was an error completing the step'})
+        }
+      } catch (error) {
+        res.status(500).send({message: 'there was an error in completeSteps endpoint' + error.message})
+        
+      }
+    })
+
+    app.patch("/deleteSteps/:id", async (req,res) => {
+      const mainObjId = req.params.id;
+      const stepId = req.body;
+      const idQuery = {_id: new ObjectId(mainObjId)}
+      const result = await tasksCollection.updateOne(idQuery, {$pull : {steps: {id: stepId}}});
+      try {
+        if(result.modifiedCount === 1){
+          res.status(200).send({message: "step has been deleted successfully"})
+        } else {
+          res.status(500).send({message: "there was an error deleting the stpes"})
+        }
+      } catch (error) {
+        res.status(500).send({message: "there was an error at deleteSteps endpoint" + error.message})
+      }
+    })
+    
+
     console.log("Connected to MongoDB!");
   } catch (error) {
     console.error("Failed to connect to MongoDB:", error);
