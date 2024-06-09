@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const app = express();
+const { v4: uuidv4 } = require('uuid');
 const port = process.env.PORT || 5000;
 
 app.get("/", (req, res) => {
@@ -119,10 +120,11 @@ async function run() {
     app.patch("/createSteps/:id", async (req, res) => {
       const id = req.params.id;
       const body = req.body;
+      const stepWithId = { ...body, _id: uuidv4()};
       try {
         const result = await tasksCollection.updateOne(
           { _id: new ObjectId(id) },
-          { $push: { steps: body } }
+          { $push: { steps: stepWithId }}
         );
         if (result.modifiedCount === 1) {
           res.status(200).send({ message: "steps have been added" });
@@ -139,26 +141,25 @@ async function run() {
 
     app.patch("/completeSteps/:id", async (req,res) => {
       const id = req.params.id;
-      const stepsId = req.body;
+      const {stepid} = req.body;
+      console.log(stepid)
       const idQuery = {_id: new ObjectId(id)}
-      const result = await tasksCollection.updateOne({idQuery,"steps.id": stepsId},{$set: {"steps.$.isCompleted": true}});
+      const result = await tasksCollection.updateOne({...idQuery,"steps._id": stepid},{$set: {"steps.$.isCompleted": true}});
       try {
         if(result.modifiedCount === 1){
-          res.status(200).send({message: `step ${stepsId} has been completed successfully`});
+          res.status(200).send({message: `step has been completed successfully`});
         } else {
           res.status(500).send({message: 'there was an error completing the step'})
         }
       } catch (error) {
-        res.status(500).send({message: 'there was an error in completeSteps endpoint' + error.message})
-        
+        res.status(500).send({message: 'there was an error in completeSteps endpoint' + error.message})        
       }
     })
 
     app.patch("/deleteSteps/:id", async (req,res) => {
       const mainObjId = req.params.id;
-      const stepId = req.body;
-      const idQuery = {_id: new ObjectId(mainObjId)}
-      const result = await tasksCollection.updateOne(idQuery, {$pull : {steps: {id: stepId}}});
+      const {stepid} = req.body;
+      const result = await tasksCollection.updateOne({_id: new ObjectId(mainObjId)}, {$pull : {steps: {_id: stepid}}});
       try {
         if(result.modifiedCount === 1){
           res.status(200).send({message: "step has been deleted successfully"})
