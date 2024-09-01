@@ -84,14 +84,22 @@ async function run() {
     });
 
     app.patch("/updateUser/:id", async (req, res) => {
-      const id = req.params.id;
+      try {
+        const id = req.params.id;
       const { _id, ...body } = req.body; // Exclude _id from the body
 
       const result = await usersCollection.updateOne(
         { _id: new ObjectId(id) },
         { $set: body }
       );
-      console.log(result);
+      if(result.modifiedCount > 0) {
+        res.status(200).send({message:"User has been updated."})
+      } else {
+        res.status(404).send({message:"There was an problem updating the user try again."})
+      }
+      } catch (error) {
+        res.send(error)
+      }
     });
 
     // Task API endpoints
