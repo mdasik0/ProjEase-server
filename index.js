@@ -50,12 +50,10 @@ async function run() {
 
         // Check if the insertion was successful
         if (result.acknowledged) {
-          return res
-            .status(201)
-            .json({
-              message: "User created successfully",
-              userId: result.insertedId,
-            });
+          return res.status(201).json({
+            message: "User created successfully",
+            userId: result.insertedId,
+          });
         } else {
           return res.status(500).json({ message: "Failed to create user" });
         }
@@ -68,11 +66,33 @@ async function run() {
       }
     });
 
-    //get user data
-    app.get("/getUsers", async(req,res) => {
-      const result = await usersCollection.find().toArray();
-      res.send(result)
-    })
+    //get single user data after login
+    app.get("/getUser/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+        // Query for a single user by email
+        const result = await usersCollection.findOne({ email: email });
+
+        if (result) {
+          res.status(200).send(result);
+        } else {
+          res.status(404).send({ message: "User not found" });
+        }
+      } catch (error) {
+        res.status(500).send({ message: "Server error", error: error.message });
+      }
+    });
+
+    app.patch("/updateUser/:id", async (req, res) => {
+      const id = req.params.id;
+      const { _id, ...body } = req.body; // Exclude _id from the body
+
+      const result = await usersCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: body }
+      );
+      console.log(result);
+    });
 
     // Task API endpoints
     app.post("/createTasks", async (req, res) => {
