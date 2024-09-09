@@ -30,6 +30,22 @@ async function run() {
 
     const tasksCollection = client.db("Projease").collection("tasks");
     const usersCollection = client.db("Projease").collection("users");
+    const projectsCollection = client.db("Projease").collection("projects");
+
+    // Projects user collection
+    app.post("/createProject", async (req,res)=>{
+      try{
+        const body = req.body;
+        const result = await projectsCollection.insertOne(body);
+        if(result){
+          res.status(200).send({message:'Project has been created successfully'});
+        } else {
+          res.status(404).send({message:'There was an error creating project. Please try again'})
+        }
+      } catch(err){
+        res.status(500).send(err.message)
+      }
+    })
 
     // User Api endpoints
     app.post("/createUser", async (req, res) => {
