@@ -33,18 +33,26 @@ async function run() {
     const projectsCollection = client.db("Projease").collection("projects");
 
     // Projects user collection
-    app.post("/createProject", async (req,res)=>{
-      try{
-        const body = req.body;
+    app.post("/createProject", async (req, res) => {
+      const body = req.body;
+      
+      try {
         const result = await projectsCollection.insertOne(body);
-        if(result){
-          res.status(200).send({message:'Project has been created successfully'});
+        if (result.acknowledged && result.insertedId) {
+          res
+            .status(200)
+            .send({ message: "Project has been created successfully" });
         } else {
-          res.status(404).send({message:'There was an error creating project. Please try again'})
+          res.status(400).send({ message: "Failed to create this project" });
         }
-      } catch(err){
-        res.status(500).send(err.message)
+      } catch (err) {
+        res.status(500).send({ message: err.message });
       }
+    });
+
+    app.get("/getallProjects", async (req,res) => {
+      result = await projectsCollection.find().toArray();
+      res.send(result)
     })
 
     // User Api endpoints
@@ -102,19 +110,23 @@ async function run() {
     app.patch("/updateUser/:id", async (req, res) => {
       try {
         const id = req.params.id;
-      const { _id, ...body } = req.body; // Exclude _id from the body
+        const { _id, ...body } = req.body; // Exclude _id from the body
 
-      const result = await usersCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: body }
-      );
-      if(result.modifiedCount > 0) {
-        res.status(200).send({message:"User has been updated."})
-      } else {
-        res.status(404).send({message:"There was an problem updating the user try again."})
-      }
+        const result = await usersCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: body }
+        );
+        if (result.modifiedCount > 0) {
+          res.status(200).send({ message: "User has been updated." });
+        } else {
+          res
+            .status(404)
+            .send({
+              message: "There was an problem updating the user try again.",
+            });
+        }
       } catch (error) {
-        res.send(error)
+        res.send(error);
       }
     });
 
