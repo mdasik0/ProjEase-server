@@ -51,10 +51,28 @@ async function run() {
     });
 
     app.get("/getallProjects", async (req,res) => {
-      result = await projectsCollection.find().toArray();
-      res.send(result)
+      const result = await projectsCollection.find().toArray();
+      res.send(result);
+      console.log(result)
     })
 
+    app.get("/joinProjects", async (req,res) => {
+      const body = req.body;
+      const {uid, password} = body;
+      const storedProjects = await projectsCollection.findOne({uid: uid}).toArray();
+      if(storedProjects) {
+        console.log('project found')
+        if(storedProjects.password === password) {
+         console.log('welcome to project' + storedProjects.name);
+        } else {
+          console.log('The password you entered is incorrect. Please try again.');
+        }
+      } else {
+        console.log('project not found')
+      }
+      
+
+    })
     // User Api endpoints
     app.post("/createUser", async (req, res) => {
       try {
