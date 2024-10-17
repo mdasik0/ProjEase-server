@@ -35,7 +35,7 @@ async function run() {
     // Projects user collection
     app.post("/createProject", async (req, res) => {
       const body = req.body;
-      
+
       try {
         const result = await projectsCollection.insertOne(body);
         if (result.acknowledged && result.insertedId) {
@@ -50,62 +50,95 @@ async function run() {
       }
     });
 
-    app.get("/getallProjects", async (req,res) => {
+    app.get("/getallProjects", async (req, res) => {
       const result = await projectsCollection.find().toArray();
       res.send(result);
-      console.log(result)
-    })
+      console.log(result);
+    });
 
-    app.get("/joinProjects", async (req,res) => {
+    app.get("/joinProjects", async (req, res) => {
       const body = req.body;
-      const {uid, password} = body;
-      const storedProjects = await projectsCollection.findOne({uid: uid}).toArray();
-      if(storedProjects) {
-        console.log('project found')
-        if(storedProjects.password === password) {
-         console.log('welcome to project' + storedProjects.name);
+      const { uid, password } = body;
+      const storedProjects = await projectsCollection
+        .findOne({ uid: uid })
+        .toArray();
+      if (storedProjects) {
+        console.log("project found");
+        if (storedProjects.password === password) {
+          console.log("welcome to project" + storedProjects.name);
         } else {
-          console.log('The password you entered is incorrect. Please try again.');
+          console.log(
+            "The password you entered is incorrect. Please try again."
+          );
         }
       } else {
-        console.log('project not found')
+        console.log("project not found");
       }
-      
-
-    })
+    });
     // User Api endpoints
     app.post("/createUser", async (req, res) => {
       try {
         const userInfo = req.body;
 
-        // Check if a user with the given email already exists
         const userAlreadyExists = await usersCollection.findOne({
           email: userInfo.email,
         });
 
-        if (userAlreadyExists) {
-          return res.status(200).json({ message: "User already exists" });
+        if (userAlreadyExists && userInfo.login_method === "google") {
+          return res.status(200).json({
+            success: false,
+            message: "Welcome back " + userAlreadyExists.name,
+            userNameExists: userAlreadyExists.name,
+            userImageExists: userAlreadyExists.image,
+          });
+        } else if (
+          userAlreadyExists &&
+          userInfo.login_method === "email-password"
+        ) {
+          return res
+            .status(200)
+            .json({ success: false, message: "User already exists" });
         }
 
-        // Insert the new user into the database
         const result = await usersCollection.insertOne(userInfo);
-
-        // Check if the insertion was successful
         if (result.acknowledged) {
           return res.status(201).json({
+            success: true,
             message: "User created successfully",
-            userId: result.insertedId,
+            userImageExists: null,
+            userNameExists: null,
           });
         } else {
-          return res.status(500).json({ message: "Failed to create user" });
+          return res
+            .status(500)
+            .json({ success: false, message: "Failed to create user" });
         }
       } catch (error) {
         console.error("Error creating user:", error);
         return res.status(500).json({
+          success: false,
           message: "An error occurred while creating the user",
           error: error.message,
         });
       }
+    });
+
+    // login user
+    app.get("/emailLogin/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await usersCollection.findOne({ email: email });
+      if (result) {
+        res
+          .status(200)
+          .send({
+            success: true,
+            method: 'email-login',
+            message: "Welcome back" + result.name,
+            userImageExists: result.image,
+            userNameExists: result.name,
+          });
+      }
+      console.log(result);
     });
 
     //get single user data after login
@@ -137,11 +170,9 @@ async function run() {
         if (result.modifiedCount > 0) {
           res.status(200).send({ message: "User has been updated." });
         } else {
-          res
-            .status(404)
-            .send({
-              message: "There was an problem updating the user try again.",
-            });
+          res.status(404).send({
+            message: "There was an problem updating the user try again.",
+          });
         }
       } catch (error) {
         res.send(error);
