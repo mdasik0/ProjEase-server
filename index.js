@@ -141,7 +141,6 @@ async function run() {
       console.log(result);
     });
 
-    app.
     //get single user data after login
     app.get("/getUser/:email", async (req, res) => {
       try {
