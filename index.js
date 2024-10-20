@@ -53,7 +53,6 @@ async function run() {
     app.get("/getallProjects", async (req, res) => {
       const result = await projectsCollection.find().toArray();
       res.send(result);
-      console.log(result);
     });
 
     app.get("/joinProjects", async (req, res) => {
@@ -133,12 +132,11 @@ async function run() {
           .send({
             success: true,
             method: 'email-login',
-            message: "Welcome back" + result.name,
+            message: "Welcome back " + result.name,
             userImageExists: result.image,
             userNameExists: result.name,
           });
       }
-      console.log(result);
     });
 
     //get single user data after login
@@ -291,7 +289,6 @@ async function run() {
     app.patch("/completeSteps/:id", async (req, res) => {
       const id = req.params.id;
       const { stepid } = req.body;
-      console.log(stepid);
       const idQuery = { _id: new ObjectId(id) };
       const result = await tasksCollection.updateOne(
         { ...idQuery, "steps._id": stepid },
