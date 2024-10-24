@@ -90,10 +90,7 @@ async function run() {
             userNameExists: userAlreadyExists.name,
             userImageExists: userAlreadyExists.image,
           });
-        } else if (
-          userAlreadyExists &&
-          userInfo.login_method === "email-password"
-        ) {
+        } else if (userAlreadyExists && userInfo.login_method === "email") {
           return res
             .status(200)
             .json({ success: false, message: "User already exists" });
@@ -127,15 +124,15 @@ async function run() {
       const email = req.params.email;
       const result = await usersCollection.findOne({ email: email });
       if (result) {
-        res
-          .status(200)
-          .send({
-            success: true,
-            method: 'email-login',
-            message: "Welcome back " + result.name,
-            userImageExists: result.image,
-            userNameExists: result.name,
-          });
+        res.status(200).send({
+          success: true,
+          method: "email-login",
+          message: result.name
+            ? "Welcome Back" + result.name
+            : "Welcome back! Complete your profile to unlock the full experience.",
+          userImageExists: result.image,
+          userNameExists: result.name,
+        });
       }
     });
 
@@ -156,15 +153,37 @@ async function run() {
       }
     });
 
+    app.patch("/updateName/:id", async (req, res) => {
+      const id = req.params.id;
+      const name = req.body;
+    
+      try {
+        const result = await usersCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { name: name?.data } }
+        );
+    
+        if (result.matchedCount === 0) {
+          return res.status(404).json({ message: "User not found" });  // Updated
+        }
+    
+        return res.status(200).json({ message: "User updated successfully" }); // Updated
+      } catch (error) {
+        return res.status(500).json({ error: "Error updating user" }); // Updated
+      }
+    });
+    
+
     app.patch("/updateUser/:id", async (req, res) => {
       try {
         const id = req.params.id;
-        const { _id, ...body } = req.body; // Exclude _id from the body
+        const body = req.body; // Exclude _id from the body
 
         const result = await usersCollection.updateOne(
           { _id: new ObjectId(id) },
           { $set: body }
         );
+
         if (result.modifiedCount > 0) {
           res.status(200).send({ message: "User has been updated." });
         } else {
