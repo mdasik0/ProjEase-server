@@ -164,12 +164,12 @@ async function run() {
         );
     
         if (result.matchedCount === 0) {
-          return res.status(404).json({ message: "User not found" });  // Updated
+          return res.status(404).json({success: false, message: "Can not update your name. Try again!" }); 
         }
     
-        return res.status(200).json({ message: "User updated successfully" }); // Updated
+        return res.status(200).json({ success:true, message: "Name updated! You're all set to upload your profile picture next." });
       } catch (error) {
-        return res.status(500).json({ error: "Error updating user" }); // Updated
+        return res.status(500).json({ error: "Error updating user" });
       }
     });
     
