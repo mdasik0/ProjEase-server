@@ -172,6 +172,27 @@ async function run() {
         return res.status(500).json({ error: "Error updating user" });
       }
     });
+    app.patch("/updateProfilePicture/:id", async (req, res) => {
+      const id = req.params.id;
+      const image = req.body;
+    
+      console.log(image);
+
+      try {
+        const result = await usersCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { image: image?.data } }
+        );
+    
+        if (result.matchedCount === 0) {
+          return res.status(404).json({success: false, message: "Can not update your image. Try again!" }); 
+        }
+    
+        return res.status(200).json({ success:true, message: "Profile picture updated! You're all set!" });
+      } catch (error) {
+        return res.status(500).json({ error: "Error updating user" });
+      }
+    });
     
 
     app.patch("/updateUser/:id", async (req, res) => {
