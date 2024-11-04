@@ -204,14 +204,23 @@ async function run() {
           { _id: new ObjectId(id) },
           { $set: body }
         );
-
-        if (result.modifiedCount > 0) {
-          res.status(200).send({ message: "User has been updated." });
-        } else {
+        if (result.matchedCount === 0) {
           res.status(404).send({
-            message: "There was an problem updating the user try again.",
+            success: false,
+            message: "User not found. Check the user ID and try again.",
+          });
+        } else if (result.modifiedCount === 0) {
+          res.status(400).send({
+            success: false,
+            message: "User data was found, but nothing was updated.",
+          });
+        } else {
+          res.status(200).send({
+            success: true,
+            message: "User has been updated.",
           });
         }
+        
       } catch (error) {
         res.send(error);
       }
