@@ -33,47 +33,8 @@ async function run() {
     const projectsCollection = client.db("Projease").collection("projects");
 
     // Projects user collection
-    app.post("/createProject", async (req, res) => {
-      const body = req.body;
+    
 
-      try {
-        const result = await projectsCollection.insertOne(body);
-        if (result.acknowledged && result.insertedId) {
-          res
-            .status(200)
-            .send({ message: "Project has been created successfully" });
-        } else {
-          res.status(400).send({ message: "Failed to create this project" });
-        }
-      } catch (err) {
-        res.status(500).send({ message: err.message });
-      }
-    });
-
-    app.get("/getallProjects", async (req, res) => {
-      const result = await projectsCollection.find().toArray();
-      res.send(result);
-    });
-
-    app.get("/joinProjects", async (req, res) => {
-      const body = req.body;
-      const { uid, password } = body;
-      const storedProjects = await projectsCollection
-        .findOne({ uid: uid })
-        .toArray();
-      if (storedProjects) {
-        console.log("project found");
-        if (storedProjects.password === password) {
-          console.log("welcome to project" + storedProjects.name);
-        } else {
-          console.log(
-            "The password you entered is incorrect. Please try again."
-          );
-        }
-      } else {
-        console.log("project not found");
-      }
-    });
     // User Api endpoints
     app.post("/createUser", async (req, res) => {
       try {
