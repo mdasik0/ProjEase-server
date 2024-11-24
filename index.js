@@ -24,7 +24,6 @@ async function run() {
       deprecationErrors: true,
     },
   });
-
   try {
     await client.connect();
 
@@ -33,7 +32,6 @@ async function run() {
     const projectsCollection = client.db("Projease").collection("projects");
 
     // Projects user collection
-    
 
     // User Api endpoints
     app.post("/createUser", async (req, res) => {
@@ -117,18 +115,29 @@ async function run() {
     app.patch("/updateName/:id", async (req, res) => {
       const id = req.params.id;
       const name = req.body;
-    
+
       try {
         const result = await usersCollection.updateOne(
           { _id: new ObjectId(id) },
           { $set: { name: name?.data } }
         );
-    
+
         if (result.matchedCount === 0) {
-          return res.status(404).json({success: false, message: "Can not update your name. Try again!" }); 
+          return res
+            .status(404)
+            .json({
+              success: false,
+              message: "Can not update your name. Try again!",
+            });
         }
-    
-        return res.status(200).json({ success:true, message: "Name updated! You're all set to upload your profile picture next." });
+
+        return res
+          .status(200)
+          .json({
+            success: true,
+            message:
+              "Name updated! You're all set to upload your profile picture next.",
+          });
       } catch (error) {
         return res.status(500).json({ error: "Error updating user" });
       }
@@ -136,7 +145,7 @@ async function run() {
     app.patch("/updateProfilePicture/:id", async (req, res) => {
       const id = req.params.id;
       const image = req.body;
-    
+
       console.log(image);
 
       try {
@@ -144,17 +153,26 @@ async function run() {
           { _id: new ObjectId(id) },
           { $set: { image: image?.data } }
         );
-    
+
         if (result.matchedCount === 0) {
-          return res.status(404).json({success: false, message: "Can not update your image. Try again!" }); 
+          return res
+            .status(404)
+            .json({
+              success: false,
+              message: "Can not update your image. Try again!",
+            });
         }
-    
-        return res.status(200).json({ success:true, message: "Profile picture updated! You're all set!" });
+
+        return res
+          .status(200)
+          .json({
+            success: true,
+            message: "Profile picture updated! You're all set!",
+          });
       } catch (error) {
         return res.status(500).json({ error: "Error updating user" });
       }
     });
-    
 
     app.patch("/updateUser/:id", async (req, res) => {
       try {
@@ -181,9 +199,19 @@ async function run() {
             message: "User has been updated.",
           });
         }
-        
       } catch (error) {
         res.send(error);
+      }
+    });
+
+    //Create project api endpoints
+    app.post("/createProject", async (req, res) => {
+      try {
+        const project = req.body;
+        const result = await projectsCollection.insertOne(project);
+        res.status(200).send(result);
+      } catch (error) {
+        res.status(500).send("Error creating project: " + error.message);
       }
     });
 
