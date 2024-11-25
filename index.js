@@ -209,11 +209,23 @@ async function run() {
       try {
         const project = req.body;
         const result = await projectsCollection.insertOne(project);
-        res.status(200).send(result);
+        console.log(result);
+        if(result.acknowledged === true) {
+
+          return res.status(200).send({success:true, message: "project was successfully created"});
+        } else {
+          res.status(400).send({success:false, message: 'there was an error creating the project'})
+        }
       } catch (error) {
         res.status(500).send("Error creating project: " + error.message);
       }
     });
+
+    app.get('/getProjects', async (req, res) => {
+      console.log("get project is hit")
+      const result = await projectsCollection.find().toArray();
+      res.status(200).send(result)
+    })
 
     // Task API endpoints
     app.post("/createTasks", async (req, res) => {
