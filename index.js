@@ -208,21 +208,45 @@ async function run() {
     app.post("/createProject", async (req, res) => {
       try {
         const project = req.body;
+        
+        // Check project creation limit
+        const userProjects = await projectsCollection
+        .find({ CreatedBy: project.CreatedBy })
+        .toArray();
+        
+        console.log(userProjects);
+        if (userProjects.length >= 2) {
+          return res.status(403).send({
+            success: false,
+            message: "You can only create up to two projects.",
+          });
+        }
+    
+        // Insert project into the database
         const result = await projectsCollection.insertOne(project);
-        console.log(result);
-        if(result.acknowledged === true) {
-
-          return res.status(200).send({success:true, message: "project was successfully created"});
+    
+        if (result.acknowledged) {
+          return res.status(200).send({
+            success: true,
+            message: "Project was successfully created.",
+          });
         } else {
-          res.status(400).send({success:false, message: 'there was an error creating the project'})
+          return res.status(500).send({
+            success: false,
+            message: "There was an error creating the project.",
+          });
         }
       } catch (error) {
-        res.status(500).send("Error creating project: " + error.message);
+        console.error("Error creating project:", error);
+        return res.status(500).send({
+          success: false,
+          message: "An unexpected error occurred: " + error.message,
+        });
       }
     });
+    
 
     app.get('/getProjects', async (req, res) => {
-      console.log("get project is hit")
       const result = await projectsCollection.find().toArray();
       res.status(200).send(result)
     })
