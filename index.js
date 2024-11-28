@@ -204,17 +204,58 @@ async function run() {
       }
     });
 
+    app.patch('/users/:id/joined-projects', async (req, res) => {
+      const id = req.params.id; // User ID
+      const newProject = req.body; // New project object to be added (e.g., { projectId, status })
+    
+      try {
+        // Ensure `newProject` is provided and has the required fields
+        if (!newProject.projectId || !newProject.status) {
+          return res.status(400).send({
+            success: false,
+            message: 'Invalid data. The projectId and status fields are required.',
+          });
+        }
+    
+        // Update logic
+        const updateResult = await usersCollection.updateOne(
+          { _id: new ObjectId(id) }, // Match the user by their ID
+          {
+            $push: { joinedProjects: newProject }, // Add the new project object to the array
+            $setOnInsert: { joinedProjects: [] }, // Ensure the field exists if it doesn't
+          }
+        );
+    
+        if (updateResult.modifiedCount > 0) {
+          return res.status(200).send({
+            success: true,
+            message: 'Project added to joinedProjects successfully.',
+          });
+        }
+    
+        return res.status(404).send({
+          success: false,
+          message: 'User not found.',
+        });
+      } catch (error) {
+        console.error('Error updating joinedProjects:', error);
+        return res.status(500).send({
+          success: false,
+          message: 'An unexpected error occurred.',
+        });
+      }
+    });
+    
+
     //Create project api endpoints
     app.post("/createProject", async (req, res) => {
       try {
         const project = req.body;
-        
-        // Check project creation limit
+    
         const userProjects = await projectsCollection
-        .find({ CreatedBy: project.CreatedBy })
-        .toArray();
-        
-        console.log(userProjects);
+          .find({ CreatedBy: project.CreatedBy })
+          .toArray();
+    
         if (userProjects.length >= 2) {
           return res.status(403).send({
             success: false,
@@ -222,13 +263,13 @@ async function run() {
           });
         }
     
-        // Insert project into the database
         const result = await projectsCollection.insertOne(project);
     
         if (result.acknowledged) {
           return res.status(200).send({
             success: true,
             message: "Project was successfully created.",
+            projectId: result.insertedId, // Include the new project's ID here
           });
         } else {
           return res.status(500).send({
@@ -244,6 +285,7 @@ async function run() {
         });
       }
     });
+    
     
 
     app.get('/getProjects', async (req, res) => {
