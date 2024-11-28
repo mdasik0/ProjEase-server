@@ -217,19 +217,32 @@ async function run() {
           });
         }
     
-        // Update logic
-        const updateResult = await usersCollection.updateOne(
-          { _id: new ObjectId(id) }, // Match the user by their ID
+        // Step 1: Ensure `joinedProjects` exists as an array
+        await usersCollection.updateOne(
+          { _id: new ObjectId(id), joinedProjects: { $exists: false } },
+          { $set: { joinedProjects: [] } }
+        );
+    
+        // Step 2: Update all existing projects to have status `passive`
+        await usersCollection.updateOne(
+          { _id: new ObjectId(id) },
           {
-            $push: { joinedProjects: newProject }, // Add the new project object to the array
-            $setOnInsert: { joinedProjects: [] }, // Ensure the field exists if it doesn't
+            $set: {
+              "joinedProjects.$[].status": "passive", // Set all statuses in the array to "passive"
+            },
           }
+        );
+    
+        // Step 3: Push the new project into the array
+        const updateResult = await usersCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $push: { joinedProjects: newProject } }
         );
     
         if (updateResult.modifiedCount > 0) {
           return res.status(200).send({
             success: true,
-            message: 'Project added to joinedProjects successfully.',
+            message: 'This project is now marked as active.',
           });
         }
     
@@ -246,22 +259,25 @@ async function run() {
       }
     });
     
+    
+    
+    
 
     //Create project api endpoints
     app.post("/createProject", async (req, res) => {
       try {
         const project = req.body;
     
-        const userProjects = await projectsCollection
-          .find({ CreatedBy: project.CreatedBy })
-          .toArray();
+        // const userProjects = await projectsCollection
+        //   .find({ CreatedBy: project.CreatedBy })
+        //   .toArray();
     
-        if (userProjects.length >= 2) {
-          return res.status(403).send({
-            success: false,
-            message: "You can only create up to two projects.",
-          });
-        }
+        // if (userProjects.length >= 2) {
+        //   return res.status(403).send({
+        //     success: false,
+        //     message: "You can only create up to two projects.",
+        //   });
+        // }
     
         const result = await projectsCollection.insertOne(project);
     
