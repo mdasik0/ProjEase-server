@@ -30,6 +30,9 @@ async function run() {
     const tasksCollection = client.db("Projease").collection("tasks");
     const usersCollection = client.db("Projease").collection("users");
     const projectsCollection = client.db("Projease").collection("projects");
+    const projectTasksCollection = client
+      .db("Projease")
+      .collection("projectTasks");
 
     // Projects user collection
 
@@ -123,21 +126,17 @@ async function run() {
         );
 
         if (result.matchedCount === 0) {
-          return res
-            .status(404)
-            .json({
-              success: false,
-              message: "Can not update your name. Try again!",
-            });
+          return res.status(404).json({
+            success: false,
+            message: "Can not update your name. Try again!",
+          });
         }
 
-        return res
-          .status(200)
-          .json({
-            success: true,
-            message:
-              "Name updated! You're all set to upload your profile picture next.",
-          });
+        return res.status(200).json({
+          success: true,
+          message:
+            "Name updated! You're all set to upload your profile picture next.",
+        });
       } catch (error) {
         return res.status(500).json({ error: "Error updating user" });
       }
@@ -155,20 +154,16 @@ async function run() {
         );
 
         if (result.matchedCount === 0) {
-          return res
-            .status(404)
-            .json({
-              success: false,
-              message: "Can not update your image. Try again!",
-            });
+          return res.status(404).json({
+            success: false,
+            message: "Can not update your image. Try again!",
+          });
         }
 
-        return res
-          .status(200)
-          .json({
-            success: true,
-            message: "Profile picture updated! You're all set!",
-          });
+        return res.status(200).json({
+          success: true,
+          message: "Profile picture updated! You're all set!",
+        });
       } catch (error) {
         return res.status(500).json({ error: "Error updating user" });
       }
@@ -204,25 +199,26 @@ async function run() {
       }
     });
 
-    app.patch('/users/:id/joined-projects', async (req, res) => {
+    app.patch("/users/:id/joined-projects", async (req, res) => {
       const id = req.params.id; // User ID
       const newProject = req.body; // New project object to be added (e.g., { projectId, status })
-    
+
       try {
         // Ensure `newProject` is provided and has the required fields
         if (!newProject.projectId || !newProject.status) {
           return res.status(400).send({
             success: false,
-            message: 'Invalid data. The projectId and status fields are required.',
+            message:
+              "Invalid data. The projectId and status fields are required.",
           });
         }
-    
+
         // Step 1: Ensure `joinedProjects` exists as an array
         await usersCollection.updateOne(
           { _id: new ObjectId(id), joinedProjects: { $exists: false } },
           { $set: { joinedProjects: [] } }
         );
-    
+
         // Step 2: Update all existing projects to have status `passive`
         await usersCollection.updateOne(
           { _id: new ObjectId(id) },
@@ -232,61 +228,68 @@ async function run() {
             },
           }
         );
-    
+
         // Step 3: Push the new project into the array
         const updateResult = await usersCollection.updateOne(
           { _id: new ObjectId(id) },
           { $push: { joinedProjects: newProject } }
         );
-    
+
         if (updateResult.modifiedCount > 0) {
           return res.status(200).send({
             success: true,
-            message: 'This project is now marked as active.',
+            message: "This project is now marked as active.",
           });
         }
-    
+
         return res.status(404).send({
           success: false,
-          message: 'User not found.',
+          message: "User not found.",
         });
       } catch (error) {
-        console.error('Error updating joinedProjects:', error);
+        console.error("Error updating joinedProjects:", error);
         return res.status(500).send({
           success: false,
-          message: 'An unexpected error occurred.',
+          message: "An unexpected error occurred.",
         });
       }
     });
-    
-    
-    
-    
 
     //Create project api endpoints
     app.post("/createProject", async (req, res) => {
       try {
         const project = req.body;
-    
+
         // const userProjects = await projectsCollection
         //   .find({ CreatedBy: project.CreatedBy })
         //   .toArray();
-    
+
         // if (userProjects.length >= 2) {
         //   return res.status(403).send({
         //     success: false,
         //     message: "You can only create up to two projects.",
         //   });
         // }
-    
-        const result = await projectsCollection.insertOne(project);
-    
-        if (result.acknowledged) {
-          return res.status(200).send({
-            success: true,
-            message: "Project was successfully created.",
-            projectId: result.insertedId, // Include the new project's ID here
-          });
+
+        const response = await projectsCollection.insertOne(project);
+
+        if (response.acknowledged) {
+          const taskObj = {
+            projectId: response.insertedId,
+            allTaskIds: [],
+          };
+
+          const taskObjInserted = await projectTasksCollection.insertOne(
+            taskObj
+          );
+
+          if (taskObjInserted.acknowledged) {
+            return res.status(200).send({
+              success: true,
+              message: "Project was successfully created.",
+              projectId: response.insertedId, // Include the new project's ID here
+            });
+          }
         } else {
           return res.status(500).send({
             success: false,
@@ -301,13 +304,11 @@ async function run() {
         });
       }
     });
-    
-    
 
-    app.get('/getProjects', async (req, res) => {
+    app.get("/getProjects", async (req, res) => {
       const result = await projectsCollection.find().toArray();
-      res.status(200).send(result)
-    })
+      res.status(200).send(result);
+    });
 
     // Task API endpoints
     app.post("/createTasks", async (req, res) => {
