@@ -260,16 +260,16 @@ async function run() {
       try {
         const project = req.body;
 
-        // const userProjects = await projectsCollection
-        //   .find({ CreatedBy: project.CreatedBy })
-        //   .toArray();
+        const userProjects = await projectsCollection
+          .find({ CreatedBy: project.CreatedBy })
+          .toArray();
 
-        // if (userProjects.length >= 2) {
-        //   return res.status(403).send({
-        //     success: false,
-        //     message: "You can only create up to two projects.",
-        //   });
-        // }
+        if (userProjects.length >= 2) {
+          return res.status(403).send({
+            success: false,
+            message: "You can only create up to two projects.",
+          });
+        }
 
         const response = await projectsCollection.insertOne(project);
 
@@ -302,6 +302,32 @@ async function run() {
           success: false,
           message: "An unexpected error occurred: " + error.message,
         });
+      }
+    });
+
+    app.patch("/updateProject/:projectId", async (req, res) => {
+      const projectId = req.params.projectId;
+      const body = req.body;
+      try {
+        const update = await projectsCollection.updateOne(
+          { _id: new ObjectId(projectId) },
+          { $set: body }
+        );
+
+        if (update.modifiedCount > 0) {
+          res
+            .status(200)
+            .send({ success: true, message: "Project updated successfully" });
+        } else {
+          res
+            .status(404)
+            .send({
+              success: false,
+              message: "Project not found or no changes made",
+            });
+        }
+      } catch (error) {
+        res.status(500).send({ success: false, error: error.message });
       }
     });
 
