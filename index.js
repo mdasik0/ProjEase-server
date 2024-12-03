@@ -331,6 +331,18 @@ async function run() {
       }
     });
 
+    app.get("/getProject/:projectId", async (req, res) => {
+      const projectId = req.params.projectId;
+      try {
+        const result = await projectsCollection.findOne({_id : new ObjectId(projectId)});
+           res.status(200).send(result);
+      } catch (error) {
+        console.error(error.message);
+        res.status(500).send({ success: false, error: error.message });
+      }
+
+    })
+
     app.get("/getProjects", async (req, res) => {
       const result = await projectsCollection.find().toArray();
       res.status(200).send(result);
