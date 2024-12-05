@@ -261,12 +261,12 @@ async function run() {
         // body pailam
         const project = req.body;
 
-        //check kormu 2 ta project tar beshi ase ki na 
+        //check kormu 2 ta project tar beshi ase ki na
         const userProjects = await projectsCollection
           .find({ CreatedBy: project.CreatedBy })
           .toArray();
 
-          // thakle ar banaite dimu na return
+        // thakle ar banaite dimu na return
         if (userProjects.length >= 2) {
           return res.status(403).send({
             success: false,
@@ -282,15 +282,17 @@ async function run() {
             projectId: response.insertedId,
             allTaskIds: [],
           };
-// set projTask insert kormu
+          // set projTask insert kormu
           const taskObjInserted = await projectTasksCollection.insertOne(
             taskObj
           );
 
-          
           if (taskObjInserted.acknowledged) {
             // insert successfull hoile taile taskObjInserted theke insertedId pamu seita projects collection e update marmu
-            await projectsCollection.updateOne({_id: new ObjectId(response.insertedId)}, {$set : {taskId: taskObjInserted.insertedId}})
+            await projectsCollection.updateOne(
+              { _id: new ObjectId(response.insertedId) },
+              { $set: { taskId: taskObjInserted.insertedId } }
+            );
             return res.status(200).send({
               success: true,
               message: "Project was successfully created.",
@@ -312,6 +314,28 @@ async function run() {
       }
     });
 
+    app.get("/getTasksInit/:taskId", async (req, res) => {
+      const taskId = req.params.taskId;
+
+      try {
+        const result = await projectTasksCollection.findOne({
+          _id: new ObjectId(taskId),
+        });
+
+        if (result) {
+          return res.status(200).send(result);
+        } else {
+          return res.status(404).send({ error: "Task not found" });
+        }
+      } catch (error) {
+        console.error("Error fetching task:", error);
+        return res.status(500).send({
+          success: false,
+          message: "An unexpected error occurred: " + error.message,
+        });
+      }
+    });
+
     app.patch("/updateProject/:projectId", async (req, res) => {
       const projectId = req.params.projectId;
       const body = req.body;
@@ -326,12 +350,10 @@ async function run() {
             .status(200)
             .send({ success: true, message: "Project updated successfully" });
         } else {
-          res
-            .status(404)
-            .send({
-              success: false,
-              message: "Project not found or no changes made",
-            });
+          res.status(404).send({
+            success: false,
+            message: "Project not found or no changes made",
+          });
         }
       } catch (error) {
         res.status(500).send({ success: false, error: error.message });
@@ -341,14 +363,15 @@ async function run() {
     app.get("/getProject/:projectId", async (req, res) => {
       const projectId = req.params.projectId;
       try {
-        const result = await projectsCollection.findOne({_id : new ObjectId(projectId)});
-           res.status(200).send(result);
+        const result = await projectsCollection.findOne({
+          _id: new ObjectId(projectId),
+        });
+        res.status(200).send(result);
       } catch (error) {
         console.error(error.message);
         res.status(500).send({ success: false, error: error.message });
       }
-
-    })
+    });
 
     app.get("/getProjects", async (req, res) => {
       const result = await projectsCollection.find().toArray();
@@ -356,11 +379,29 @@ async function run() {
     });
 
     // Task API endpoints
-    app.post("/createTasks", async (req, res) => {
+    app.post("/createTasks/:taskInitId", async (req, res) => {
+      const taskInitId = req.params.taskInitId;
       try {
         const task = req.body;
-        const result = await tasksCollection.insertOne(task);
-        res.status(201).send(result);
+        const taskCreated = await tasksCollection.insertOne(task);
+        if (taskCreated.acknowledged) {
+          const updateTaskInit = await projectTasksCollection.updateOne(
+            { _id: new ObjectId(taskInitId) },
+            { $addToSet: { allTasks: taskCreated.insertedId } }
+          );
+
+          // console.log("project id", taskInitId);
+          // console.log("task create", taskCreated);
+          // console.log("project update", updateTaskInit);
+          if (updateTaskInit.modifiedCount > 0) {
+            res
+              .status(200)
+              .send({
+                success: true,
+                message: "Task has been Created successfully.",
+              });
+          }
+        }
       } catch (error) {
         res.status(500).send("Error creating task: " + error.message);
       }
@@ -410,11 +451,58 @@ async function run() {
     });
 
     app.get("/tasks", async (req, res) => {
+      const result = await tasksCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/allTasks", async (req, res) => {
+      const allTasksIdStr = req.query.ids; // Extract the comma-separated string from the query
+
+      if (!allTasksIdStr) {
+        return res.status(400).send({
+          success: true,
+          tasks: [],
+        });
+      }
+
+      // Convert the comma-separated string to an array of task IDs
+      const allTasksIdArr = allTasksIdStr
+        .split(",")
+        .map((id) => {
+          if (!ObjectId.isValid(id)) {
+            console.error(`Invalid ID: ${id}`); // Log invalid IDs
+            return null; // Invalid ID will be filtered out
+          }
+          return new ObjectId(id);
+        })
+        .filter((id) => id !== null); // Remove any null values (invalid IDs)
+
+      console.log(allTasksIdArr, allTasksIdStr);
+
+      if (allTasksIdArr.length === 0) {
+        return res.status(400).send({
+          success: false,
+          message: "No valid task IDs provided.",
+        });
+      }
+
       try {
-        const result = await tasksCollection.find().toArray(); // Convert cursor to array
-        res.status(200).send(result);
+        // Fetch tasks matching the provided IDs
+        const tasks = await tasksCollection
+          .find({ _id: { $in: allTasksIdArr } })
+          .toArray();
+
+        // Respond with the fetched tasks
+        return res.status(200).send({
+          success: true,
+          tasks,
+        });
       } catch (error) {
-        res.status(500).send("Error fetching tasks: " + error.message);
+        console.error("Error fetching tasks:", error.message);
+        return res.status(500).send({
+          message: "An error occurred while fetching tasks.",
+          error: error.message,
+        });
       }
     });
 
