@@ -258,12 +258,15 @@ async function run() {
     //Create project api endpoints
     app.post("/createProject", async (req, res) => {
       try {
+        // body pailam
         const project = req.body;
 
+        //check kormu 2 ta project tar beshi ase ki na 
         const userProjects = await projectsCollection
           .find({ CreatedBy: project.CreatedBy })
           .toArray();
 
+          // thakle ar banaite dimu na return
         if (userProjects.length >= 2) {
           return res.status(403).send({
             success: false,
@@ -271,19 +274,23 @@ async function run() {
           });
         }
 
+        // na thakle banaite dimu
         const response = await projectsCollection.insertOne(project);
-
         if (response.acknowledged) {
+          // bananer por response jodi kore taile ekta projTask banamu
           const taskObj = {
             projectId: response.insertedId,
             allTaskIds: [],
           };
-
+// set projTask insert kormu
           const taskObjInserted = await projectTasksCollection.insertOne(
             taskObj
           );
 
+          
           if (taskObjInserted.acknowledged) {
+            // insert successfull hoile taile taskObjInserted theke insertedId pamu seita projects collection e update marmu
+            await projectsCollection.updateOne({_id: new ObjectId(response.insertedId)}, {$set : {taskId: taskObjInserted.insertedId}})
             return res.status(200).send({
               success: true,
               message: "Project was successfully created.",
