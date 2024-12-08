@@ -145,7 +145,7 @@ async function run() {
       const id = req.params.id;
       const image = req.body;
 
-      console.log(image);
+      // console.log(image);
 
       try {
         const result = await usersCollection.updateOne(
@@ -198,6 +198,48 @@ async function run() {
         res.send(error);
       }
     });
+
+    app.get('/getMultUsers', async (req, res) => {
+      const userIdsArr =  req.query.userIds;
+
+      const allMembers = userIdsArr
+        .split(",")
+        .map((id) => {
+          if (!ObjectId.isValid(id)) {
+            console.error(`Invalid ID: ${id}`); 
+            return null; 
+          }
+          return new ObjectId(id);
+        })
+        .filter((id) => id !== null); 
+
+      if (allMembers.length === 0) {
+        return res.status(400).send({
+          success: false,
+          message: "No members available in this project.",
+        });
+      }
+
+      // console.log(allMembers);
+
+      try {
+        // Fetch users matching the provided IDs
+        const members = await usersCollection
+          .find({ _id: { $in: allMembers } })
+          .toArray();
+
+        // Respond with the fetched members
+
+        console.log(members);
+        return res.status(200).send(members);
+      } catch (error) {
+        console.error("Error fetching members:", error.message);
+        return res.status(500).send({
+          message: "An error occurred while fetching tasks.",
+          error: error.message,
+        });
+      }
+    })
 
     app.patch("/users/:id/joined-projects", async (req, res) => {
       const id = req.params.id; // User ID
@@ -459,25 +501,19 @@ async function run() {
       const allTasksIdStr = req.query.ids; // Extract the comma-separated string from the query
 
       if (!allTasksIdStr) {
-        return res.status(400).send({
-          success: true,
-          tasks: [],
-        });
+        return res.status(400).send([]);
       }
 
-      // Convert the comma-separated string to an array of task IDs
       const allTasksIdArr = allTasksIdStr
         .split(",")
         .map((id) => {
           if (!ObjectId.isValid(id)) {
-            console.error(`Invalid ID: ${id}`); // Log invalid IDs
-            return null; // Invalid ID will be filtered out
+            console.error(`Invalid ID: ${id}`); 
+            return null; 
           }
           return new ObjectId(id);
         })
-        .filter((id) => id !== null); // Remove any null values (invalid IDs)
-
-      console.log(allTasksIdArr, allTasksIdStr);
+        .filter((id) => id !== null); 
 
       if (allTasksIdArr.length === 0) {
         return res.status(400).send({
@@ -493,10 +529,7 @@ async function run() {
           .toArray();
 
         // Respond with the fetched tasks
-        return res.status(200).send({
-          success: true,
-          tasks,
-        });
+        return res.status(200).send(tasks);
       } catch (error) {
         console.error("Error fetching tasks:", error.message);
         return res.status(500).send({
