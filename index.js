@@ -4,6 +4,20 @@ require("dotenv").config();
 const app = express();
 const { v4: uuidv4 } = require("uuid");
 const port = process.env.PORT || 5000;
+const http = require("http");
+const { Server } = require("socket.io")
+const server = http.createServer(app);
+const io = new server(Server ,{
+  cors : {
+    origin: '*',
+    method: ['GET', 'POST']
+  }
+})
+
+io.on("connection", (socket) => {
+  console.log('user connected' + socket.id);
+  
+})
 
 app.get("/", (req, res) => {
   res.send("Welcome to Projease");
@@ -199,19 +213,19 @@ async function run() {
       }
     });
 
-    app.get('/getMultUsers', async (req, res) => {
-      const userIdsArr =  req.query.userIds;
+    app.get("/getMultUsers", async (req, res) => {
+      const userIdsArr = req.query.userIds;
 
       const allMembers = userIdsArr
         .split(",")
         .map((id) => {
           if (!ObjectId.isValid(id)) {
-            console.error(`Invalid ID: ${id}`); 
-            return null; 
+            console.error(`Invalid ID: ${id}`);
+            return null;
           }
           return new ObjectId(id);
         })
-        .filter((id) => id !== null); 
+        .filter((id) => id !== null);
 
       if (allMembers.length === 0) {
         return res.status(400).send({
@@ -239,7 +253,7 @@ async function run() {
           error: error.message,
         });
       }
-    })
+    });
 
     app.patch("/users/:id/joined-projects", async (req, res) => {
       const id = req.params.id; // User ID
@@ -436,12 +450,10 @@ async function run() {
           // console.log("task create", taskCreated);
           // console.log("project update", updateTaskInit);
           if (updateTaskInit.modifiedCount > 0) {
-            res
-              .status(200)
-              .send({
-                success: true,
-                message: "Task has been Created successfully.",
-              });
+            res.status(200).send({
+              success: true,
+              message: "Task has been Created successfully.",
+            });
           }
         }
       } catch (error) {
@@ -452,39 +464,46 @@ async function run() {
     app.patch("/updateTaskStatus/:id", async (req, res) => {
       try {
         const id = req.params.id;
-        const obj = await tasksCollection.findOne({ _id: new ObjectId(id) });
+        const task = await tasksCollection.findOne({ _id: new ObjectId(id) });
 
-        if (!obj) {
+        if (!task) {
           return res.status(404).send({ message: "Task is not found" });
         }
 
         let newStatus;
-        if (obj.status === "pending") {
+        if (task.status === "pending") {
           newStatus = "in-progress";
-        } else if (obj.status === "in-progress") {
+        } else if (task.status === "in-progress") {
           newStatus = "completed";
-        } else if (obj.status === "completed") {
+        } else if (task.status === "completed") {
           return res.status(200).send({ message: "Task is already complete" });
         }
 
-        if (newStatus) {
-          const result = await tasksCollection.updateOne(
-            { _id: new ObjectId(id) },
-            { $set: { status: newStatus } }
-          );
-          if (result.modifiedCount === 1) {
-            const result = await tasksCollection.find();
-            const message =
-              newStatus === "in-progress"
-                ? "Task is in progress"
-                : "Task is complete";
-            return res.status(200).send({ message, ...result });
-          } else {
-            return res
-              .status(500)
-              .send({ message: "Failed to update task status" });
-          }
+        const updateFields = {
+          status: newStatus,
+        };
+
+        if(newStatus === "complete") {
+          updateFields.completeDate = new Date();
         }
+
+         const result = await tasksCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: updateFields }
+          );
+          
+    if (result.modifiedCount === 1) {
+      return res.status(200).send({
+        success: true,
+        message: newStatus === "in-progress"
+          ? "Task is now in progress"
+          : "Task is now completed",
+        taskId: id,
+        updatedStatus: newStatus,
+      });
+    } else {
+      return res.status(500).send({ message: "Failed to update task status" });
+    }
       } catch (error) {
         return res
           .status(500)
@@ -508,12 +527,12 @@ async function run() {
         .split(",")
         .map((id) => {
           if (!ObjectId.isValid(id)) {
-            console.error(`Invalid ID: ${id}`); 
-            return null; 
+            console.error(`Invalid ID: ${id}`);
+            return null;
           }
           return new ObjectId(id);
         })
-        .filter((id) => id !== null); 
+        .filter((id) => id !== null);
 
       if (allTasksIdArr.length === 0) {
         return res.status(400).send({
