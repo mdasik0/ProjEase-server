@@ -1,31 +1,44 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const app = express();
 const { v4: uuidv4 } = require("uuid");
-const port = process.env.PORT || 5000;
 const http = require("http");
-const { Server } = require("socket.io")
+const { Server } = require("socket.io");
+const app = express();
 const server = http.createServer(app);
-const io = new server(Server ,{
-  cors : {
-    origin: '*',
-    method: ['GET', 'POST']
-  }
-})
-
-io.on("connection", (socket) => {
-  console.log('user connected' + socket.id);
-  
-})
-
-app.get("/", (req, res) => {
-  res.send("Welcome to Projease");
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
 });
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+const user = {};
+
+app.get("/", (req, res) => {
+  res.send("Welcome to Projease");
+});
+
+io.on("connection", (socket) => {
+  console.log("A user connected", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected", socket.id);
+  });
+
+  // Example for handling custom events
+  socket.on("customEvent", (data) => {
+    console.log("Custom event received:", data);
+    // Respond back to the client if needed
+    socket.emit("customEventResponse", { message: "Acknowledged" });
+  });
+});
+
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = process.env.MONGO_URI;
@@ -244,7 +257,6 @@ async function run() {
 
         // Respond with the fetched members
 
-        console.log(members);
         return res.status(200).send(members);
       } catch (error) {
         console.error("Error fetching members:", error.message);
@@ -371,13 +383,18 @@ async function run() {
     });
 
     app.get("/getTasksInit/:taskId", async (req, res) => {
-      const taskId = req.params.taskId;
-
+      const taskId = req.params.taskId.trim();
+    
       try {
+        // Validate taskId
+        if (!taskId || !ObjectId.isValid(taskId)) {
+          return console.log('No taskId provided.');
+        }
+
         const result = await projectTasksCollection.findOne({
           _id: new ObjectId(taskId),
         });
-
+    
         if (result) {
           return res.status(200).send(result);
         } else {
@@ -391,6 +408,7 @@ async function run() {
         });
       }
     });
+    
 
     app.patch("/updateProject/:projectId", async (req, res) => {
       const projectId = req.params.projectId;
@@ -483,27 +501,30 @@ async function run() {
           status: newStatus,
         };
 
-        if(newStatus === "complete") {
+        if (newStatus === "complete") {
           updateFields.completeDate = new Date();
         }
 
-         const result = await tasksCollection.updateOne(
-            { _id: new ObjectId(id) },
-            { $set: updateFields }
-          );
-          
-    if (result.modifiedCount === 1) {
-      return res.status(200).send({
-        success: true,
-        message: newStatus === "in-progress"
-          ? "Task is now in progress"
-          : "Task is now completed",
-        taskId: id,
-        updatedStatus: newStatus,
-      });
-    } else {
-      return res.status(500).send({ message: "Failed to update task status" });
-    }
+        const result = await tasksCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updateFields }
+        );
+
+        if (result.modifiedCount === 1) {
+          return res.status(200).send({
+            success: true,
+            message:
+              newStatus === "in-progress"
+                ? "Task is now in progress"
+                : "Task is now completed",
+            taskId: id,
+            updatedStatus: newStatus,
+          });
+        } else {
+          return res
+            .status(500)
+            .send({ message: "Failed to update task status" });
+        }
       } catch (error) {
         return res
           .status(500)
@@ -671,6 +692,8 @@ app.use((err, req, res, next) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`app listening on port ${port}`);
+const PORT = process.env.PORT || 5000;
+
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
