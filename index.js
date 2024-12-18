@@ -27,16 +27,32 @@ app.get("/", (req, res) => {
 io.on("connection", (socket) => {
   console.log("A user connected", socket.id);
 
+  // Listen for the user joining a group/room
+  socket.on("joinGroup", (groupName) => {
+    socket.join(groupName); // User joins the room
+    console.log(`${socket.id} joined group: ${groupName}`);
+
+    // Notify other users in the group (except the sender)
+    socket.to(groupName).emit("userJoined", {
+      message: `A new user has joined the group: ${groupName}`,
+      userId: socket.id,
+    });
+  });
+
+  // Listen for messages sent to the group
+  socket.on("groupMessage", ({ groupName, message }) => {
+    // Emit the message to all users in the group, including the sender
+    io.to(groupName).emit("newGroupMessage", {
+      senderId: socket.id,
+      message: message,
+      timestamp: new Date(),
+    });
+  });
+
   socket.on("disconnect", () => {
     console.log("User disconnected", socket.id);
   });
 
-  // Example for handling custom events
-  socket.on("customEvent", (data) => {
-    console.log("Custom event received:", data);
-    // Respond back to the client if needed
-    socket.emit("customEventResponse", { message: "Acknowledged" });
-  });
 });
 
 
