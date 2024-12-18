@@ -18,43 +18,88 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-const user = {};
-
 app.get("/", (req, res) => {
   res.send("Welcome to Projease");
 });
 
+const users = {};
+const groups = {};
+
 io.on("connection", (socket) => {
   console.log("A user connected", socket.id);
 
-  // Listen for the user joining a group/room
-  socket.on("joinGroup", (groupName) => {
-    socket.join(groupName); // User joins the room
-    console.log(`${socket.id} joined group: ${groupName}`);
+  // Register User
+  socket.on("register", (userId) => {
+    if (users[userId]) {
+      socket.emit("registerResponse", {
+        success: false,
+        message: `User ID ${userId} is already registered.`,
+      });
+      return;
+    }
 
-    // Notify other users in the group (except the sender)
-    socket.to(groupName).emit("userJoined", {
-      message: `A new user has joined the group: ${groupName}`,
-      userId: socket.id,
+    users[userId] = socket.id;
+    console.log(`User registered: ${userId}, Socket: ${socket.id}`, users);
+
+    socket.emit("registerResponse", {
+      success: true,
+      message: `User ${userId} registered successfully.`,
     });
   });
 
-  // Listen for messages sent to the group
-  socket.on("groupMessage", ({ groupName, message }) => {
-    // Emit the message to all users in the group, including the sender
-    io.to(groupName).emit("newGroupMessage", {
-      senderId: socket.id,
-      message: message,
+  // Join Group
+  socket.on("joinGroup", (groupId) => {
+    if (!groupId || typeof groupId !== "string" || groupId.trim() === "") {
+      socket.emit("error", { message: "Invalid group name." });
+      return;
+    }
+
+    if (!groups[groupId]) {
+      groups[groupId] = [];
+    }
+
+    // Avoid duplicate entries
+    if (!groups[groupId].includes(socket.id)) {
+      groups[groupId].push(socket.id);
+    }
+
+    socket.join(groupId);
+    console.log(`${socket.id} joined group: ${groupId}`, groups);
+
+    socket.emit("groupJoinResponse", {
+      success: true,
+      groupId,
+      message: `You joined group: ${groupId}`,
+    });
+  });
+
+  socket.on("groupMessage", ({ groupId, message }) => {
+    console.log(groupId, message);
+    if (!groupId || !message) {
+      socket.emit("error", {
+        message: "Group name and message are required.",
+      });
+      return;
+    }
+
+    const userId = Object.keys(users).find((key) => users[key] === socket.id);
+
+    io.to(groupId).emit("groupMessageReceived", {
+      sender: userId,
+      message,
       timestamp: new Date(),
     });
+
+    console.log(`Message from ${userId} to group ${groupId}: ${message}`);
   });
 
+  // Handle Disconnect
   socket.on("disconnect", () => {
+    const userId = Object.keys(users).find((key) => users[key] === socket.id);
+    if (userId) delete users[userId];
     console.log("User disconnected", socket.id);
   });
-
 });
-
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = process.env.MONGO_URI;
@@ -400,17 +445,17 @@ async function run() {
 
     app.get("/getTasksInit/:taskId", async (req, res) => {
       const taskId = req.params.taskId.trim();
-    
+
       try {
         // Validate taskId
         if (!taskId || !ObjectId.isValid(taskId)) {
-          return console.log('No taskId provided.');
+          return console.log("No taskId provided.");
         }
 
         const result = await projectTasksCollection.findOne({
           _id: new ObjectId(taskId),
         });
-    
+
         if (result) {
           return res.status(200).send(result);
         } else {
@@ -424,7 +469,6 @@ async function run() {
         });
       }
     });
-    
 
     app.patch("/updateProject/:projectId", async (req, res) => {
       const projectId = req.params.projectId;
