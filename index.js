@@ -122,6 +122,8 @@ async function run() {
       .db("Projease")
       .collection("projectTasks");
 
+    
+
     // Projects user collection
 
     // User Api endpoints
@@ -442,6 +444,30 @@ async function run() {
         });
       }
     });
+
+    app.post("/join-project", async (req, res) => {
+      const body = req.body;
+      const {projId, password} = body;
+      try {
+
+        const isProjectAvailable = await projectsCollection.findOne({_id: new ObjectId(projId)});
+        if (!isProjectAvailable){
+          return res.status(404).send({success: false, message: "Project do not exist."})
+        } else {
+          const passMatch = isProjectAvailable.password === password;
+          if (!passMatch){
+            return res.status(404).send({success: false, message: "Project do not exist."});
+          }
+
+          // TODO: make sure user can only enter the password three times if user enters it more then three times a lock of 3 hour will be added. after 3 hours if the user tries to join the project the number of tries will be reset and if he makes mistake will rise again. 
+
+        }
+      } catch (err) {
+        res.status(500).send({success: false, message: `Error occurred in url:/join-project ${err.message}`})
+        return console.error(`Error occurred in url:/join-project ${err.message}`)
+      }
+
+    })
 
     app.get("/getTasksInit/:taskId", async (req, res) => {
       const taskId = req.params.taskId.trim();
