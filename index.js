@@ -531,12 +531,23 @@ async function run() {
             }
           );
 
+          const userObj = await usersCollection.findOne({_id: new ObjectId(String(userId))},{projection: {joinedProjects : 1}});
+
+          const updatedJoinedProjects = userObj.joinedProjects.map((project) =>
+            project.status === "active" ? { ...project, status: "passive" } : project
+          );
+      
+          updatedJoinedProjects.push({ projectId: projId, status: "active" });
+      
+          await usersCollection.updateOne(
+            { _id: new ObjectId(String(userId)) },
+            { $set: { joinedProjects: updatedJoinedProjects } }
+          );
+
           res.status(200).send({
             success: true,
             message: "Successfully joined the project.",
           });
-
-          // TODO: make sure user can only enter the password three times if user enters it more then three times a lock of 3 hour will be added. after 3 hours if the user tries to join the project the number of tries will be reset and if he makes mistake will rise again.
         }
       } catch (err) {
         res
