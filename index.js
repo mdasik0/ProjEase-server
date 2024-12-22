@@ -122,8 +122,6 @@ async function run() {
       .db("Projease")
       .collection("projectTasks");
 
-    
-
     // Projects user collection
 
     // User Api endpoints
@@ -169,6 +167,11 @@ async function run() {
           error: error.message,
         });
       }
+    });
+
+    app.get("/get-all-users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
     });
 
     // login user
@@ -299,7 +302,7 @@ async function run() {
             console.error(`Invalid ID: ${id}`);
             return null;
           }
-          return new ObjectId(id);
+          return new ObjectId(String(id));
         })
         .filter((id) => id !== null);
 
@@ -387,6 +390,11 @@ async function run() {
     });
 
     //Create project api endpoints
+    app.get("/get-all-projects", async (req, res) => {
+      const result = await projectsCollection.find().toArray();
+      res.send(result);
+    });
+
     app.post("/createProject", async (req, res) => {
       try {
         // body pailam
@@ -446,28 +454,102 @@ async function run() {
     });
 
     app.post("/join-project", async (req, res) => {
-      const body = req.body;
-      const {projId, password} = body;
+      const { projId, password, userId } = req.body;
       try {
+        const projObjectId = new ObjectId(String(projId))
+        const isProjectAvailable = await projectsCollection.findOne(
+          { _id:  projObjectId},
+          { projection: { projectPassword: 1, attemptTracker: 1, members: 1 } }
+        );
 
-        const isProjectAvailable = await projectsCollection.findOne({_id: new ObjectId(projId)});
-        if (!isProjectAvailable){
-          return res.status(404).send({success: false, message: "Project do not exist."})
+        if (!isProjectAvailable) {
+          return res
+            .status(404)
+            .send({ success: false, message: "Project do not exist." });
         } else {
-          const passMatch = isProjectAvailable.password === password;
-          if (!passMatch){
-            return res.status(404).send({success: false, message: "Project do not exist."});
+          const { projectPassword, attemptTracker } = isProjectAvailable;
+
+          if (!attemptTracker || attemptTracker[userId]) {
+            isProjectAvailable.attemptTracker = {
+              ...attemptTracker,
+              [userId]: { attempts: 0, lastAttempt: null },
+            };
           }
 
-          // TODO: make sure user can only enter the password three times if user enters it more then three times a lock of 3 hour will be added. after 3 hours if the user tries to join the project the number of tries will be reset and if he makes mistake will rise again. 
+          const userAttempts = isProjectAvailable.attemptTracker[userId];
+          const currentTime = Date.now();
+          if (
+            userAttempts.attempts >= 3 &&
+            userAttempts.lastAttempt &&
+            currentTime - userAttempts.lastAttempt < 3 * 60 * 60 * 1000
+          ) {
+            return res.status(403).send({
+              success: false,
+              message:
+                "You are temporarily locked out. Try again after 3 hours.",
+            });
+          }
 
+          const passMatch = projectPassword === password;
+
+          if (!passMatch) {
+            isProjectAvailable.attemptTracker[userId] = {
+              attempts: userAttempts.attempts + 1,
+              lastAttempt: currentTime,
+            };
+
+            await projectsCollection.updateOne(
+              { _id: new ObjectId(String(projId)) },
+              { $set: { attemptTracker: isProjectAvailable.attemptTracker } }
+            );
+
+            const attemptsRemain = 3 - (userAttempts.attempts + 1);
+
+            return res.status(401).send({
+              success: false,
+              message: `Invalid password. You have ${attemptsRemain} attempt(s) left.`,
+            });
+          }
+
+          isProjectAvailable.attemptTracker[userId] = {
+            attempts: 0,
+            lastAttempt: 0,
+          };
+
+          await projectsCollection.updateOne(
+            { _id: new ObjectId(String(projId)) },
+            {
+              $set: {
+                [`attemptTracker.${userId}`]: {
+                  attempts: 0,
+                  lastAttempt: null,
+                },
+              },
+              $push: {
+                members: { userId, role: "member" },
+              },
+            }
+          );
+
+          res.status(200).send({
+            success: true,
+            message: "Successfully joined the project.",
+          });
+
+          // TODO: make sure user can only enter the password three times if user enters it more then three times a lock of 3 hour will be added. after 3 hours if the user tries to join the project the number of tries will be reset and if he makes mistake will rise again.
         }
       } catch (err) {
-        res.status(500).send({success: false, message: `Error occurred in url:/join-project ${err.message}`})
-        return console.error(`Error occurred in url:/join-project ${err.message}`)
+        res
+          .status(500)
+          .send({
+            success: false,
+            message: `Error occurred in url:/join-project ${err.message}`,
+          });
+        return console.error(
+          `Error occurred in url:/join-project ${err.message}`
+        );
       }
-
-    })
+    });
 
     app.get("/getTasksInit/:taskId", async (req, res) => {
       const taskId = req.params.taskId.trim();
@@ -637,7 +719,7 @@ async function run() {
             console.error(`Invalid ID: ${id}`);
             return null;
           }
-          return new ObjectId(id);
+          return new ObjectId(String(id));
         })
         .filter((id) => id !== null);
 
