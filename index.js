@@ -454,6 +454,7 @@ async function run() {
     });
 
     app.post("/join-project", async (req, res) => {
+      console.log(req.body)
       const { projId, password, userId } = req.body;
       try {
         const projObjectId = new ObjectId(String(projId))
@@ -469,7 +470,7 @@ async function run() {
         } else {
           const { projectPassword, attemptTracker } = isProjectAvailable;
 
-          if (!attemptTracker || attemptTracker[userId]) {
+          if (!attemptTracker || !attemptTracker[userId]) {
             isProjectAvailable.attemptTracker = {
               ...attemptTracker,
               [userId]: { attempts: 0, lastAttempt: null },
@@ -533,16 +534,21 @@ async function run() {
 
           const userObj = await usersCollection.findOne({_id: new ObjectId(String(userId))},{projection: {joinedProjects : 1}});
 
-          const updatedJoinedProjects = userObj.joinedProjects.map((project) =>
-            project.status === "active" ? { ...project, status: "passive" } : project
-          );
-      
-          updatedJoinedProjects.push({ projectId: projId, status: "active" });
-      
-          await usersCollection.updateOne(
-            { _id: new ObjectId(String(userId)) },
-            { $set: { joinedProjects: updatedJoinedProjects } }
-          );
+          if(!userObj.joinedProjects || userObj.joinedProjects.length === 0) {
+            await usersCollection.updateOne({_id: new ObjectId(String(userId))}, {$set: {joinedProjects: [{projectId: projId, status: "active"}]}})
+          } else {
+            const updatedJoinedProjects = userObj.joinedProjects.map((project) =>
+              project.status === "active" ? { ...project, status: "passive" } : project
+            );
+        
+            updatedJoinedProjects.push({ projectId: projId, status: "active" });
+        
+            await usersCollection.updateOne(
+              { _id: new ObjectId(String(userId)) },
+              { $set: { joinedProjects: updatedJoinedProjects } }
+            );
+          }
+
 
           res.status(200).send({
             success: true,
