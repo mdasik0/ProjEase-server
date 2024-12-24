@@ -588,10 +588,10 @@ async function run() {
       // }
       try {
         const response = await invitationCollection.insertMany(invitationInfo);
-        if (response.insertedCount < 0) {
+        if (response.insertedCount > 0) {
           res
             .status(200)
-            .send({ success: true, message: response.insertedIds });
+            .send({ success: true, insertedIds: response.insertedIds });
         } else {
           res
             .status(400)
