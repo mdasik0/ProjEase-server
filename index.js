@@ -586,9 +586,27 @@ async function run() {
       // if (invitationInfo.length ===0) {
       //   res.status(404).send({success: false, message: "Please enter an email address."})
       // }
-
-      const response = await invitationCollection.insertMany(invitationInfo);
-      console.log(response);
+      try {
+        const response = await invitationCollection.insertMany(invitationInfo);
+        if (response.insertedCount < 0) {
+          res
+            .status(200)
+            .send({ success: true, message: response.insertedIds });
+        } else {
+          res
+            .status(400)
+            .send({
+              success: false,
+              message: "There was an error inviting members. Please try again.",
+            });
+        }
+      } catch (error) {
+        console.error("Error occurred in route: /invite-members");
+        return res.status(500).send({
+          success: false,
+          message: "An unexpected error occurred: " + error.message,
+        });
+      }
     });
 
     app.get("/getTasksInit/:taskId", async (req, res) => {
