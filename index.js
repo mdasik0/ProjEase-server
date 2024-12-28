@@ -581,6 +581,20 @@ async function run() {
       }
     });
 
+    app.get('/invitation-info/:id', async (req, res) => {
+      const id = req.params.id;
+      try {
+        const response = await invitationCollection.findOne({_id: new ObjectId(id)})
+        res.status(200).send(response)
+      }  catch (error) {
+        console.error("Error at invitation-info:", error);
+        return res.status(500).send({
+          success: false,
+          message: "An unexpected error occurred: " + error.message,
+        });
+      }
+    })
+
     app.post("/invite-members", async (req, res) => {
       const invitationInfo = req.body;
       // if (invitationInfo.length ===0) {
