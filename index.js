@@ -139,7 +139,7 @@ async function run() {
         if (userAlreadyExists && userInfo.login_method === "google") {
           return res.status(200).json({
             success: false,
-            message: "Welcome back " + userAlreadyExists.name,
+            message: "Welcome back " + userAlreadyExists.name.firstname + " " + userAlreadyExists.name.lastname,
             userNameExists: userAlreadyExists.name,
             userImageExists: userAlreadyExists.image,
           });
@@ -186,7 +186,7 @@ async function run() {
           success: true,
           method: "email-login",
           message: result.name
-            ? "Welcome Back" + result.name
+            ? "Welcome Back" + result.name.firstname + " " + result.name.lastname
             : "Welcome back! Complete your profile to unlock the full experience.",
           userImageExists: result.image,
           userNameExists: result.name,
