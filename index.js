@@ -28,7 +28,6 @@ const groups = {};
 io.on("connection", (socket) => {
   console.log("A user connected", socket.id);
 
-  // Register User
   socket.on("register", (userId) => {
     if (users[userId]) {
       socket.emit("registerResponse", {
@@ -37,44 +36,37 @@ io.on("connection", (socket) => {
       });
       return;
     }
-
     users[userId] = socket.id;
-    console.log(`User registered: ${userId}, Socket: ${socket.id}`, users);
-
     socket.emit("registerResponse", {
       success: true,
       message: `User ${userId} registered successfully.`,
     });
   });
 
-  // Join Group
   socket.on("joinGroup", (groupId) => {
     if (!groupId || typeof groupId !== "string" || groupId.trim() === "") {
-      socket.emit("error", { message: "Invalid group name." });
+      socket.emit("error", { message: "Invalid group ID." });
       return;
     }
-
     if (!groups[groupId]) {
       groups[groupId] = [];
     }
+    
+    groups[groupId].push(socket.id);
 
-    // Avoid duplicate entries
-    if (!groups[groupId].includes(socket.id)) {
-      groups[groupId].push(socket.id);
-    }
-
-    socket.join(groupId);
     console.log(`${socket.id} joined group: ${groupId}`, groups);
 
+    socket.join(groupId);
+    
     socket.emit("groupJoinResponse", {
       success: true,
       groupId,
       message: `You joined group: ${groupId}`,
     });
   });
-
+  
   socket.on("groupMessage", ({ groupId, message }) => {
-    console.log(groupId, message);
+    console.log(groups)
     if (!groupId || !message) {
       socket.emit("error", {
         message: "Group name and message are required.",
@@ -84,13 +76,15 @@ io.on("connection", (socket) => {
 
     const userId = Object.keys(users).find((key) => users[key] === socket.id);
 
+    console.log(groupId);
+
     io.to(groupId).emit("groupMessageReceived", {
       sender: userId,
       message,
       timestamp: new Date(),
     });
 
-    console.log(`Message from ${userId} to group ${groupId}: ${message}`);
+    console.log(`Message from ${socket.id} to group ${groupId}: ${message}`);
   });
 
   // Handle Disconnect
