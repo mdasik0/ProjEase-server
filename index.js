@@ -28,7 +28,8 @@ const groups = {};
 io.on("connection", (socket) => {
   console.log("A user connected", socket.id);
 
-  socket.on("register", (userId) => {
+  socket.on("register", (userData) => {
+    const {userId} = userData;
     if (users[userId]) {
       socket.emit("registerResponse", {
         success: false,
@@ -36,11 +37,12 @@ io.on("connection", (socket) => {
       });
       return;
     }
-    users[userId] = socket.id;
+    users[userId] = {socket: socket.id, ...userData};
     socket.emit("registerResponse", {
       success: true,
       message: `User ${userId} registered successfully.`,
     });
+    console.log(users);
   });
 
   socket.on("joinGroup", (groupId) => {
@@ -74,12 +76,12 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const userId = Object.keys(users).find((key) => users[key] === socket.id);
+    const userId = Object.keys(users).find((key) => users[key].socket === socket.id);
 
-    console.log(groupId);
+    console.log(userId);
 
     io.to(groupId).emit("groupMessageReceived", {
-      sender: userId,
+      sender: users[userId], 
       message,
       timestamp: new Date(),
     });
