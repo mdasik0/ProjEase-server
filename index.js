@@ -7,6 +7,7 @@ const userRoutes = require("./routes/userRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const joinProjectRoute = require("./routes/joinProjectRoute");
+const invitationRoute = require("./routes/invitationRoutes");
 
 // App setup
 const app = express();
@@ -54,62 +55,7 @@ async function run() {
     app.use("/", taskRoutes(client.db("Projease")));
     app.use("/", projectRoutes(client.db("Projease")));
     app.use("/", joinProjectRoute(client.db("Projease")));
-
-    
-    //Create project api endpoints
-    
-
-    
-
-    
-
-    app.get("/invitation-info/:id", async (req, res) => {
-      const id = req.params.id;
-      try {
-        const response = await invitationCollection.findOne({
-          _id: new ObjectId(id),
-        });
-        res.status(200).send(response);
-      } catch (error) {
-        console.error("Error at invitation-info:", error);
-        return res.status(500).send({
-          success: false,
-          message: "An unexpected error occurred: " + error.message,
-        });
-      }
-    });
-
-    app.post("/invite-members", async (req, res) => {
-      const invitationInfo = req.body;
-      // if (invitationInfo.length ===0) {
-      //   res.status(404).send({success: false, message: "Please enter an email address."})
-      // }
-      try {
-        const response = await invitationCollection.insertMany(invitationInfo);
-        if (response.insertedCount > 0) {
-          res
-            .status(200)
-            .send({ success: true, insertedIds: response.insertedIds });
-        } else {
-          res.status(400).send({
-            success: false,
-            message: "There was an error inviting members. Please try again.",
-          });
-        }
-      } catch (error) {
-        console.error("Error occurred in route: /invite-members");
-        return res.status(500).send({
-          success: false,
-          message: "An unexpected error occurred: " + error.message,
-        });
-      }
-    });
-
-    
-
-   
-
-  
+    app.use("/", invitationRoute(client.db("Projease")));
 
     console.log(`Connected to MongoDB! server url=http://localhost:5000`);
   } catch (error) {
