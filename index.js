@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const { v4: uuidv4 } = require("uuid");
 const http = require("http");
 const userRoutes = require("./routes/userRoutes");
 const taskRoutes = require("./routes/taskRoutes");
@@ -25,7 +24,7 @@ app.get("/", (req, res) => {
   res.send("Welcome to Projease");
 });
 
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { MongoClient, ServerApiVersion } = require("mongodb");
 const uri = process.env.MONGO_URI;
 
 async function run() {
@@ -39,23 +38,13 @@ async function run() {
   try {
     await client.connect();
 
-    const tasksCollection = client.db("Projease").collection("tasks");
-    const usersCollection = client.db("Projease").collection("users");
-    const projectsCollection = client.db("Projease").collection("projects");
-    const invitationCollection = client
-      .db("Projease")
-      .collection("invitations");
-    const projectTasksCollection = client
-      .db("Projease")
-      .collection("projectTasks");
+    const db = client.db("Projease")
 
-    // Projects user collection
-
-    app.use("/", userRoutes(client.db("Projease")));
-    app.use("/", taskRoutes(client.db("Projease")));
-    app.use("/", projectRoutes(client.db("Projease")));
-    app.use("/", joinProjectRoute(client.db("Projease")));
-    app.use("/", invitationRoute(client.db("Projease")));
+    app.use(userRoutes(db));
+    app.use(taskRoutes(db));
+    app.use(projectRoutes(db));
+    app.use(joinProjectRoute(db));
+    app.use(invitationRoute(db));
 
     console.log(`Connected to MongoDB! server url=http://localhost:5000`);
   } catch (error) {
