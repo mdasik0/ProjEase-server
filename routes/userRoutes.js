@@ -227,6 +227,62 @@ router.patch("/updateUser/:id", async (req, res) => {
     }
   });
 
+  router.patch("/users/:id/joined-projects", async (req, res) => {
+        const id = req.params.id; // User ID
+        const newProject = req.body; // New project object to be added (e.g., { projectId, status })
+  
+        try {
+          // Ensure `newProject` is provided and has the required fields
+          if (!newProject.projectId || !newProject.status) {
+            return res.status(400).send({
+              success: false,
+              message:
+                "Invalid data. The projectId and status fields are required.",
+            });
+          }
+  
+          // Step 1: Ensure `joinedProjects` exists as an array
+          await usersCollection.updateOne(
+            { _id: new ObjectId(id), joinedProjects: { $exists: false } },
+            { $set: { joinedProjects: [] } }
+          );
+  
+          // Step 2: Update all existing projects to have status `passive`
+          await usersCollection.updateOne(
+            { _id: new ObjectId(id) },
+            {
+              $set: {
+                "joinedProjects.$[].status": "passive", // Set all statuses in the array to "passive"
+              },
+            }
+          );
+  
+          // Step 3: Push the new project into the array
+          const updateResult = await usersCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $push: { joinedProjects: newProject } }
+          );
+  
+          if (updateResult.modifiedCount > 0) {
+            return res.status(200).send({
+              success: true,
+              message: "This project is now marked as active.",
+            });
+          }
+  
+          return res.status(404).send({
+            success: false,
+            message: "User not found.",
+          });
+        } catch (error) {
+          console.error("Error updating joinedProjects:", error);
+          return res.status(500).send({
+            success: false,
+            message: "An unexpected error occurred.",
+          });
+        }
+      });
+
   return router;
 };
 
