@@ -7,7 +7,7 @@ const taskRoutes = require("./routes/taskRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const joinProjectRoute = require("./routes/joinProjectRoute");
 const invitationRoute = require("./routes/invitationRoutes");
-
+const { connectToDB } = require("./db/dbConnect");
 // App setup
 const app = express();
 const server = http.createServer(app);
@@ -24,29 +24,16 @@ app.get("/", (req, res) => {
   res.send("Welcome to Projease");
 });
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
-const uri = process.env.MONGO_URI;
-
 async function run() {
-  const client = new MongoClient(uri, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true,
-    },
-  });
   try {
-    await client.connect();
-
-    const db = client.db("Projease")
-
+    const db = await connectToDB();
     app.use(userRoutes(db));
     app.use(taskRoutes(db));
     app.use(projectRoutes(db));
     app.use(joinProjectRoute(db));
     app.use(invitationRoute(db));
 
-    console.log(`Connected to MongoDB! server url=http://localhost:5000`);
+    console.log(`server url=http://localhost:5000`);
   } catch (error) {
     console.error("Failed to connect to MongoDB:", error);
   }
