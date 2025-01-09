@@ -18,7 +18,6 @@ app.use(express.json());
 
 const setupSockets = require("./socket");
 
-setupSockets(server);
 
 app.get("/", (req, res) => {
   res.send("Welcome to Projease");
@@ -32,6 +31,7 @@ async function run() {
     app.use(projectRoutes(db));
     app.use(joinProjectRoute(db));
     app.use(invitationRoute(db));
+    setupSockets(server,db);
 
     console.log(`server url=http://localhost:5000`);
   } catch (error) {
