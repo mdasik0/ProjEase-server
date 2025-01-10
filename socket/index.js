@@ -4,6 +4,9 @@ const users = {};
 const groups = {};
 
 module.exports = (server, db) => {
+
+  const messageCollection = db.collection('messages');
+
   const io = new Server(server, {
     cors: {
       origin: "http://localhost:5173",
@@ -54,7 +57,7 @@ module.exports = (server, db) => {
       });
     });
 
-    socket.on("groupMessage", ({ groupId, message }) => {
+    socket.on("groupMessage", async ({ groupId, message }) => {
       if (!groupId || !message) {
         socket.emit("error", {
           message: "Group name and message are required.",
@@ -66,15 +69,20 @@ module.exports = (server, db) => {
         (key) => users[key].socket === socket.id
       );
 
-
-      // maybe here we will send a message to database;
-      // after that we will implement it on the 
       const messageObject = {
         sender: users[userId],
         msgObj: message,
       }
 
-      io.to(groupId).emit("groupMessageReceived", messageObject);
+      //TODO: check if data is properly sent to the database
+      try {
+        await messageCollection.insertOne(messageObject);
+        io.to(groupId).emit("groupMessageReceived", messageObject);
+      } catch (error) {
+        console.error("Error saving message:", error);
+        socket.emit("error", { message: "Failed to send message." });
+      }
+      
 
       console.log(`Message from ${socket.id} to group ${groupId}: ${message}`);
     });
