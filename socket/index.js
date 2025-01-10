@@ -66,13 +66,15 @@ module.exports = (server, db) => {
         (key) => users[key].socket === socket.id
       );
 
-      console.log(userId);
 
-      io.to(groupId).emit("groupMessageReceived", {
+      // maybe here we will send a message to database;
+      // after that we will implement it on the 
+      const messageObject = {
         sender: users[userId],
-        message,
-        timestamp: new Date(),
-      });
+        msgObj: message,
+      }
+
+      io.to(groupId).emit("groupMessageReceived", messageObject);
 
       console.log(`Message from ${socket.id} to group ${groupId}: ${message}`);
     });
