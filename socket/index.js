@@ -69,12 +69,13 @@ module.exports = (server, db) => {
         (key) => users[key].socket === socket.id
       );
 
-      const messageObject = {
-        sender: users[userId],
-        msgObj: message,
-      }
+      const { socket: _, ...userWithoutSocket } = users[userId];
 
-      //TODO: check if data is properly sent to the database
+      const messageObject = {
+        sender: userWithoutSocket, // Sender object without the 'socket' property
+        msgObj: message,
+      };
+
       try {
         await messageCollection.insertOne(messageObject);
         io.to(groupId).emit("groupMessageReceived", messageObject);
