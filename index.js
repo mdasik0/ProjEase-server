@@ -17,6 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 const setupSockets = require("./socket");
+const messagesRoutes = require("./routes/messagesRoutes");
 
 
 app.get("/", (req, res) => {
@@ -31,6 +32,7 @@ async function run() {
     app.use(projectRoutes(db));
     app.use(joinProjectRoute(db));
     app.use(invitationRoute(db));
+    app.use(messagesRoutes(db))
     setupSockets(server,db);
 
     console.log(`server url=http://localhost:5000`);
