@@ -28,8 +28,7 @@ const messagesRoutes = (db) => {
         const updateProject = await projectsCollection.updateOne({_id: ObjectId(projectId)}, {
           $set: {ChatId : response.insertedId}
         })
-        if(updateProject.modifiedCount > 0) {
-
+        if(updateProject.modifiedCount > 0) { 
           res.status(201).send({
             success: true,
             message: "Chat group created successfully.",
