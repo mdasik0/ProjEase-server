@@ -20,30 +20,41 @@ const messagesRoutes = (db) => {
           .status(400)
           .send({ success: false, message: "Request body cannot be empty." });
       }
-  
-      const response = await chatGroupCollection.insertOne(chatGroupInfo);
-      console.log(response);
-  
-      if(response.acknowledged) {
-        const updateProject = await projectsCollection.updateOne({_id: ObjectId(projectId)}, {
-          $set: {ChatId : response.insertedId}
-        })
-        if(updateProject.modifiedCount > 0) { 
-          res.status(201).send({
-            success: true,
-            message: "Chat group created successfully.",
-          })
-        } else {
-          res.status(400).send({success: false, message: 'There was an error creating a chat group for this project. Try again later.'})
-        }
+      if (!projectId || !ObjectId.isValid(projectId)) {
+        return res
+          .status(400)
+          .send({ success: false, message: "Invalid or missing projectId." });
       }
+      const response = await chatGroupCollection.insertOne(chatGroupInfo);
+  
+      if (!response.acknowledged || !response.insertedId) {
+        return res.status(500).send({
+          success: false,
+          message: "Failed to create chat group. Please try again.",
+        });
+      }
+      const updateProject = await projectsCollection.updateOne(
+        { _id: ObjectId(projectId) },
+        { $set: { ChatId: response.insertedId } }
+      );
+  
+      if (!updateProject.modifiedCount) {
+        return res.status(500).send({
+          success: false,
+          message:
+            "There was an error creating a chat group for this project. Try again later.",
+        });
+      }
+      res.status(201).send({
+        success: true,
+        message: "Chat group created successfully.",
+      });
     } catch (error) {
-      console.error("Error in chat-group route:", error.message);
-      res
-        .status(500)
-        .send({ success: false, message: "Server error. Please try again." });
+      console.error("Error in chat-group route:", error);
+      res.status(500).send({ success: false, message: error.message });
     }
   });
+  
   
 
   router.get("/messages/:groupId", async (req, res) => {
