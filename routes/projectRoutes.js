@@ -6,11 +6,11 @@ const projectRoutes = (db) => {
   // db collections
   const projectsCollection = db.collection("projects");
   const projectTasksCollection = db.collection("projectTasks");
+  const chatGroupCollection = db.collection("chat-group");
 
   //API routes
-  router.post("/createProject", async (req, res) => {
+  router.post("/project", async (req, res) => {
     try {
-      // body pailam
       const project = req.body;
 
       //check kormu 2 ta project tar beshi ase ki na
@@ -34,14 +34,20 @@ const projectRoutes = (db) => {
           projectId: response.insertedId,
           allTaskIds: [],
         };
+        const chatObj = {
+          projectId: response.insertedId,
+          unseen: [],
+          mediaFiles: [],
+        }
         // set projTask insert kormu
         const taskObjInserted = await projectTasksCollection.insertOne(taskObj);
+        const chatObjInserted = await chatGroupCollection.insertOne(chatObj);
 
-        if (taskObjInserted.acknowledged) {
+        if (taskObjInserted.acknowledged && chatObjInserted.acknowledged) {
           // insert successfull hoile taile taskObjInserted theke insertedId pamu seita projects collection e update marmu
           await projectsCollection.updateOne(
-            { _id: new ObjectId(response.insertedId) },
-            { $set: { taskId: taskObjInserted.insertedId } }
+            { _id: new ObjectId(String(response.insertedId)) },
+            { $set: { taskId: taskObjInserted.insertedId, ChatId:chatObjInserted.insertedId  } }
           );
           return res.status(200).send({
             success: true,
@@ -69,7 +75,7 @@ const projectRoutes = (db) => {
     res.send(result);
   });
 
-  router.patch("/updateProject/:projectId", async (req, res) => {
+  router.patch("/project/:projectId", async (req, res) => {
     const projectId = req.params.projectId;
     const body = req.body;
     try {
