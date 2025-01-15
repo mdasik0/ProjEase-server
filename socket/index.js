@@ -1,10 +1,12 @@
 const { Server } = require("socket.io");
+const { ObjectId } = require("mongodb");
 
 const users = {};
 const groups = {};
 
 module.exports = (server, db) => {
   const messageCollection = db.collection("messages");
+  const chatGroupCollection = db.collection("chat-group");
 
   const io = new Server(server, {
     cors: {
@@ -20,13 +22,20 @@ module.exports = (server, db) => {
     // Register a user
     socket.on("register", (userData) => {
       const { userId } = userData;
+      if (!userId || typeof userId !== "string" || userId.trim() === "") {
+        socket.emit("error", { message: "Invalid user ID." });
+        return;
+      }
+
       if (users[userId]) {
-        users[userId].socket = socket.id; 
+        // Update existing user's socket ID
+        users[userId].socket = socket.id;
         socket.emit("registerResponse", {
           success: true,
           message: `User ${userId} reconnected successfully.`,
         });
       } else {
+        // Register new user
         users[userId] = { socket: socket.id, ...userData };
         socket.emit("registerResponse", {
           success: true,
@@ -47,7 +56,9 @@ module.exports = (server, db) => {
         (key) => users[key].socket === socket.id
       );
       if (!userId) {
-        socket.emit("error", { message: "You must register before joining a group." });
+        socket.emit("error", {
+          message: "You must register before joining a group.",
+        });
         return;
       }
 
@@ -55,23 +66,31 @@ module.exports = (server, db) => {
         groups[groupId] = [];
       }
 
+      // Add socket to group only if not already present
       if (!groups[groupId].includes(socket.id)) {
         groups[groupId].push(socket.id);
+        socket.join(groupId);
+
+        console.log(`${socket.id} joined group: ${groupId}`, groups);
+
+        socket.emit("groupJoinResponse", {
+          success: true,
+          groupId,
+          message: `You joined group: ${groupId}`,
+        });
+      } else {
+        socket.emit("groupJoinResponse", {
+          success: true,
+          groupId,
+          message: `You are already in group: ${groupId}`,
+        });
       }
-
-      console.log(`${socket.id} joined group: ${groupId}`, groups);
-
-      socket.join(groupId);
-
-      socket.emit("groupJoinResponse", {
-        success: true,
-        groupId,
-        message: `You joined group: ${groupId}`,
-      });
     });
 
     // Send a group message
-    socket.on("groupMessage", async ({ groupId, message }) => {
+    socket.on("groupMessage", async ({ groupId, message, members }) => {
+      const offlineMembers = members.filter((member) => !users[member.userId]);
+
       if (!groupId || !message) {
         socket.emit("error", {
           message: "Group name and message are required.",
@@ -83,20 +102,37 @@ module.exports = (server, db) => {
         (key) => users[key].socket === socket.id
       );
       if (!userId) {
-        socket.emit("error", { message: "You must register to send messages." });
+        socket.emit("error", {
+          message: "You must register to send messages.",
+        });
         return;
       }
-
+      
       const { socket: _, ...userWithoutSocket } = users[userId];
-
+      
       const messageObject = {
-        sender: userWithoutSocket, // Sender object without the 'socket' property
+        sender: userWithoutSocket,
         msgObj: message,
       };
+      
+      io.to(groupId).emit("groupMessageReceived", messageObject);
 
       try {
         await messageCollection.insertOne(messageObject);
-        io.to(groupId).emit("groupMessageReceived", messageObject);
+        if (offlineMembers.length > 0) {
+          for (const member of offlineMembers) {
+            const userField = `unseenMessageCount.${member.userId}`
+        
+            await chatGroupCollection.updateOne(
+              { _id: new ObjectId(groupId) },
+              {
+                $inc: { [userField]: 1 }, // Increment count for offline member
+              }
+            );
+          }
+        }
+        
+
       } catch (error) {
         console.error("Error saving message:", error);
         socket.emit("error", { message: "Failed to send message." });
