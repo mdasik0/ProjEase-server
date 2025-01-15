@@ -85,7 +85,6 @@ const joinProjectRoute = (db) => {
         } else if ((invited && isProjectAvailable.isPrivate) || !invited) {
           // if entered password and project password do not match increase the attempt tracker
           if (!passMatch) {
-            //TODO: changes here
             isProjectAvailable.attemptTracker[userId] = {
               attempts: userAttempts.attempts + 1,
               lastAttempt: currentTime,
