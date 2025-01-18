@@ -20,7 +20,7 @@ module.exports = (server, db) => {
     console.log("A user connected", socket.id);
 
     // Register a user
-    socket.on("register", (userData) => {
+    socket.on("register", async (userData) => {
       const { userId } = userData;
       if (!userId || typeof userId !== "string" || userId.trim() === "") {
         socket.emit("error", { message: "Invalid user ID." });
@@ -30,6 +30,13 @@ module.exports = (server, db) => {
       if (users[userId]) {
         // Update existing user's socket ID
         users[userId].socket = socket.id;
+
+        //resets the user's unseen message count
+        await chatGroupCollection.updateOne(
+          { [`unseenMessageCount.${userId}`]: { $exists: true } }, 
+          { $set: { [`unseenMessageCount.${userId}`]: 0 } } 
+        );
+
         socket.emit("registerResponse", {
           success: true,
           message: `User ${userId} reconnected successfully.`,
@@ -42,7 +49,7 @@ module.exports = (server, db) => {
           message: `User ${userId} registered successfully.`,
         });
       }
-      console.log(users);
+      // console.log(users);
     });
 
     // Join a group
@@ -71,7 +78,7 @@ module.exports = (server, db) => {
         groups[groupId].push(socket.id);
         socket.join(groupId);
 
-        console.log(`${socket.id} joined group: ${groupId}`, groups);
+        // console.log(`${socket.id} joined group: ${groupId}`, groups);
 
         socket.emit("groupJoinResponse", {
           success: true,
@@ -107,38 +114,34 @@ module.exports = (server, db) => {
         });
         return;
       }
-      
+
       const { socket: _, ...userWithoutSocket } = users[userId];
-      
+
       const messageObject = {
         sender: userWithoutSocket,
         msgObj: message,
       };
-      
+
       io.to(groupId).emit("groupMessageReceived", messageObject);
 
       try {
         await messageCollection.insertOne(messageObject);
         if (offlineMembers.length > 0) {
           for (const member of offlineMembers) {
-            const userField = `unseenMessageCount.${member.userId}`
-        
+            const userField = `unseenMessageCount.${member.userId}`;
+
             await chatGroupCollection.updateOne(
-              { _id: new ObjectId(groupId) },
+              { _id: new ObjectId(String(groupId)) },
               {
                 $inc: { [userField]: 1 }, // Increment count for offline member
               }
             );
           }
         }
-        
-
       } catch (error) {
         console.error("Error saving message:", error);
         socket.emit("error", { message: "Failed to send message." });
       }
-
-      console.log(`Message from ${socket.id} to group ${groupId}: ${message}`);
     });
 
     // Handle disconnection
