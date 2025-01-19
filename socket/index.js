@@ -125,7 +125,9 @@ module.exports = (server, db) => {
       io.to(groupId).emit("groupMessageReceived", messageObject);
 
       try {
-        await messageCollection.insertOne(messageObject);
+        const responseFromSendingMessage = await messageCollection.insertOne(messageObject);
+        console.log("🚀 ~ socket.on ~ responseFromSendingMessage:", responseFromSendingMessage)
+        
         if (offlineMembers.length > 0) {
           for (const member of offlineMembers) {
             const userField = `unseenMessageCount.${member.userId}`;

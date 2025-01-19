@@ -57,7 +57,7 @@ const messagesRoutes = (db) => {
       const messageData = await messageCollection.find().toArray();
 
       const filteredMessages = messageData.filter(
-        (m) => m.msgObj.groupChatId === groupId
+        (m) => m.msgObj.groupId === groupId
       );
       res.status(200).json(filteredMessages);
     } catch (error) {
