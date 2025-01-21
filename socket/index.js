@@ -122,11 +122,13 @@ module.exports = (server, db) => {
         msgObj: message,
       };
 
-      io.to(groupId).emit("groupMessageReceived", messageObject);
-
       try {
         const responseFromSendingMessage = await messageCollection.insertOne(messageObject);
         console.log("🚀 ~ socket.on ~ responseFromSendingMessage:", responseFromSendingMessage)
+        if(!responseFromSendingMessage.insertedId) {
+          socket.emit("error", { message: "Failed to send message." });
+        }
+        io.to(groupId).emit("groupMessageReceived", {...messageObject, _id: responseFromSendingMessage.insertedId});
         
         if (offlineMembers.length > 0) {
           for (const member of offlineMembers) {
@@ -145,6 +147,16 @@ module.exports = (server, db) => {
         socket.emit("error", { message: "Failed to send message." });
       }
     });
+
+    socket.on('deleteMessage', async (_id) => {
+      const deleteMessageResponse = await messageCollection.deleteOne({_id: new ObjectId(String(_id))})
+      console.log("deleteMessageResponse",deleteMessageResponse)
+      if(deleteMessageResponse.acknowledged){
+        socket.emit('deleteMessageResponse', {success: true, message: 'Message has been deleted.'})
+      }else {
+        socket.emit('deleteMessageResponse',{success:false, message: 'Failed to delete this Message. Refresh and try again.'})
+      }
+    })
 
     // Handle disconnection
     socket.on("disconnect", () => {

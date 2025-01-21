@@ -10,9 +10,6 @@ const messagesRoutes = (db) => {
 
   router.get("/unseenMessageCount/:projectId/:userId", async (req, res) => {
     const { projectId, userId } = req.params;
-    console.log("🚀 ~ router.get ~ userId:", userId)
-    console.log("🚀 ~ router.get ~ projectId:", projectId)
-
   
     try {
       // Fetch chat group document based on projectId
