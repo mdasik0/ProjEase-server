@@ -150,7 +150,6 @@ module.exports = (server, db) => {
 
     socket.on('deleteMessage', async (_id) => {
       const deleteMessageResponse = await messageCollection.deleteOne({_id: new ObjectId(String(_id))})
-      console.log("deleteMessageResponse",deleteMessageResponse)
       if(deleteMessageResponse.acknowledged){
         socket.emit('deleteMessageResponse', {success: true, message: 'Message has been deleted.'})
       }else {
