@@ -137,7 +137,7 @@ module.exports = (server, db) => {
             await chatGroupCollection.updateOne(
               { _id: new ObjectId(String(groupId)) },
               {
-                $inc: { [userField]: 1 }, // Increment count for offline member
+                $inc: { [userField]: 1 },
               }
             );
           }
