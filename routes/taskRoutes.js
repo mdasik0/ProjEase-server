@@ -30,6 +30,40 @@ const taskRoutes = (db) => {
     }
   });
 
+  router.get("/tasks/status-summary", async (req, res) => {
+    const projectId = req.query.ids;
+
+    // console.log("projectId", projectId);
+    // console.log("projectId", projectId ? "true" : "false");
+    try {
+      if (!projectId) {
+        return res.status(200).send([
+          { name: "pending", value: 1 },
+          { name: "in progress", value: 1 },
+          { name: "completed", value: 1 },
+        ]);
+      } else {
+        const tasksObjIdArr = req.query.ids
+          ?.split(",")
+          .map((id) => new ObjectId(String(id.trim())));
+        
+        const tasks = await tasksCollection.find({ _id: { $in: tasksObjIdArr } }).toArray();
+
+        const summary = [
+          { name: "pending", value: tasks.filter(t => t.status === "pending").length },
+          { name: "in progress", value: tasks.filter(t => t.status === "in-progress").length },
+          { name: "completed", value: tasks.filter(t => t.status === "completed").length },
+        ]
+
+        return res.status(200).send(summary);
+      }
+    } catch (error) {
+      res
+        .status(500)
+        .send("Error fetching task status summary: " + error.message);
+    }
+  });
+
   // Update task status
   router.patch("/updateTaskStatus/:id", async (req, res) => {
     try {
@@ -253,7 +287,7 @@ const taskRoutes = (db) => {
       });
     }
   });
-  
+
   return router;
 };
 
