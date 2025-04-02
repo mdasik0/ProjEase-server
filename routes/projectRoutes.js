@@ -7,18 +7,17 @@ const projectRoutes = (db) => {
   const projectsCollection = db.collection("projects");
   const projectTasksCollection = db.collection("projectTasks");
   const chatGroupCollection = db.collection("chat-group");
+  const announcementsCollection = db.collection("announcements");
 
   //API routes
   router.post("/project", async (req, res) => {
     try {
       const project = req.body;
 
-      //check kormu 2 ta project tar beshi ase ki na
       const userProjects = await projectsCollection
         .find({ CreatedBy: project.CreatedBy })
         .toArray();
 
-      // thakle ar banaite dimu na return
       if (userProjects.length >= 2) {
         return res.status(403).send({
           success: false,
@@ -26,10 +25,8 @@ const projectRoutes = (db) => {
         });
       }
 
-      // na thakle banaite dimu
       const response = await projectsCollection.insertOne(project);
       if (response.acknowledged) {
-        // bananer por response jodi kore taile ekta projTask banamu
         const taskObj = {
           projectId: response.insertedId,
           allTaskIds: [],
@@ -39,12 +36,10 @@ const projectRoutes = (db) => {
           unseen: [],
           mediaFiles: [],
         }
-        // set projTask insert kormu
         const taskObjInserted = await projectTasksCollection.insertOne(taskObj);
         const chatObjInserted = await chatGroupCollection.insertOne(chatObj);
 
         if (taskObjInserted.acknowledged && chatObjInserted.acknowledged) {
-          // insert successfull hoile taile taskObjInserted theke insertedId pamu seita projects collection e update marmu
           await projectsCollection.updateOne(
             { _id: new ObjectId(String(response.insertedId)) },
             { $set: { taskId: taskObjInserted.insertedId, ChatId:chatObjInserted.insertedId  } }
@@ -52,7 +47,7 @@ const projectRoutes = (db) => {
           return res.status(200).send({
             success: true,
             message: "Project was successfully created.",
-            projectId: response.insertedId, // Include the new project's ID here
+            projectId: response.insertedId,
           });
         }
       } else {
@@ -105,6 +100,51 @@ const projectRoutes = (db) => {
       const result = await projectsCollection.findOne({
         _id: new ObjectId(projectId),
       });
+      res.status(200).send(result);
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).send({ success: false, error: error.message });
+    }
+  });
+
+  router.post("/announcement", async (req, res) => {
+    const announcement = req.body;
+
+    if (!announcement.projectId) {
+      return res.status(400).send({ message: "Please Join a Project" });
+    }
+    if(!announcement.title || !announcement.content) {
+      return res.status(400).send({ message: "Please provide a announcement info" });
+    }
+
+    try {
+      const result = await announcementsCollection.insertOne(announcement);
+      if (result.acknowledged) {
+        return res.status(200).send({
+          success: true,
+          message: "Announcement was successfully created.",
+          announcementId: result.insertedId,
+        });
+      } else {
+        return res.status(500).send({
+          success: false,
+          message: "There was an error creating the announcement.",
+        });
+      }
+    } catch (error) {
+      console.error("Error creating announcement:", error);
+      return res.status(500).send({
+        success: false,
+        message: "An unexpected error occurred: " + error.message,
+      });
+    }
+
+  });
+
+  router.get("/announcement/:projectId", async (req, res) => {
+    const projectId = req.params.projectId;
+    try {
+      const result = await announcementsCollection.find({ projectId }).toArray();
       res.status(200).send(result);
     } catch (error) {
       console.error(error.message);
