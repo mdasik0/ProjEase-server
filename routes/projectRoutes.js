@@ -35,14 +35,19 @@ const projectRoutes = (db) => {
           projectId: response.insertedId,
           unseen: [],
           mediaFiles: [],
-        }
+        };
         const taskObjInserted = await projectTasksCollection.insertOne(taskObj);
         const chatObjInserted = await chatGroupCollection.insertOne(chatObj);
 
         if (taskObjInserted.acknowledged && chatObjInserted.acknowledged) {
           await projectsCollection.updateOne(
             { _id: new ObjectId(String(response.insertedId)) },
-            { $set: { taskId: taskObjInserted.insertedId, ChatId:chatObjInserted.insertedId  } }
+            {
+              $set: {
+                taskId: taskObjInserted.insertedId,
+                ChatId: chatObjInserted.insertedId,
+              },
+            }
           );
           return res.status(200).send({
             success: true,
@@ -113,8 +118,10 @@ const projectRoutes = (db) => {
     if (!announcement.projectId) {
       return res.status(400).send({ message: "Please Join a Project" });
     }
-    if(!announcement.title || !announcement.content) {
-      return res.status(400).send({ message: "Please provide a announcement info" });
+    if (!announcement.title || !announcement.content) {
+      return res
+        .status(400)
+        .send({ message: "Please provide a announcement info" });
     }
 
     try {
@@ -138,19 +145,60 @@ const projectRoutes = (db) => {
         message: "An unexpected error occurred: " + error.message,
       });
     }
-
   });
 
   router.get("/announcement/:projectId", async (req, res) => {
     const projectId = req.params.projectId;
     try {
-      const result = await announcementsCollection.find({ projectId }).toArray();
+      const result = await announcementsCollection
+        .find({ projectId })
+        .toArray();
       res.status(200).send(result);
     } catch (error) {
       console.error(error.message);
       res.status(500).send({ success: false, error: error.message });
     }
   });
+
+  router.post("/joinedProjectsInfo", async (req, res) => {
+    try {
+      const body = req.body; // [{ projectId, status }]
+      if (!Array.isArray(body)) {
+        return res.status(400).json({ error: "Invalid input format" });
+      }
+  
+      // Extract unique project IDs
+      const projectIds = [...new Set(body.map((p) => p.projectId))].map(
+        (id) => new ObjectId(String(id))
+      );
+  
+      // Fetch only _id and projectName
+      const projects = await projectsCollection
+        .find(
+          { _id: { $in: projectIds } },
+          { projection: { projectName: 1 } }
+        )
+        .toArray();
+  
+      // Map ID to name
+      const idToName = {};
+      projects.forEach((p) => {
+        idToName[p._id.toString()] = p.projectName;
+      });
+  
+      // Merge names into response
+      const response = body.map((item) => ({
+        ...item,
+        name: idToName[item.projectId] || "Unknown",
+      }));
+  
+      res.json(response);
+    } catch (error) {
+      console.error("Error in /joinedProjectsInfo:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+  
 
   return router;
 };
