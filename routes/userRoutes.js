@@ -290,7 +290,6 @@ const userRoutes = (db) => {
   router.patch("/switch-project-status", async (req, res) => {
     const projectId = req.query.projectId;
     const userId = req.query.userId;
-    console.log(projectId, userId)
 
     if (!projectId || !userId) {
       return res.status(400).json({ error: "Missing projectId or userId" });
