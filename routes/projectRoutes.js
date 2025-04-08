@@ -199,7 +199,6 @@ const projectRoutes = (db) => {
     }
   });
   
-
   return router;
 };
 
