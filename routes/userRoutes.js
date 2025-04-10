@@ -1,11 +1,11 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
-
+const { generateAccessToken } = require("../utils/jwtUtils");
 const userRoutes = (db) => {
   const router = express.Router();
   const usersCollection = db.collection("users");
 
-  // Create User Route
+  // social and email user creation route
   router.post("/createUser", async (req, res) => {
     try {
       const userInfo = req.body;
@@ -14,17 +14,23 @@ const userRoutes = (db) => {
         email: userInfo.email,
       });
 
+      // Generate JWT token
+      const token = generateAccessToken({ email: userInfo.email });
+
       if (userAlreadyExists && userInfo.login_method === "google") {
         return res.status(200).json({
           success: false,
           message: `Welcome back ${userAlreadyExists.name.firstname} ${userAlreadyExists.name.lastname}`,
           userNameExists: userAlreadyExists.name,
           userImageExists: userAlreadyExists.image,
+          token, // send token even if user already exists
         });
       } else if (userAlreadyExists && userInfo.login_method === "email") {
-        return res
-          .status(200)
-          .json({ success: false, message: "User already exists" });
+        return res.status(200).json({
+          success: false,
+          message: "User already exists",
+          token, // send token
+        });
       }
 
       const result = await usersCollection.insertOne(userInfo);
@@ -34,11 +40,13 @@ const userRoutes = (db) => {
           message: "User created successfully",
           userImageExists: null,
           userNameExists: null,
+          token, // send token
         });
       } else {
-        return res
-          .status(500)
-          .json({ success: false, message: "Failed to create user" });
+        return res.status(500).json({
+          success: false,
+          message: "Failed to create user",
+        });
       }
     } catch (error) {
       console.error("Error creating user:", error);
@@ -316,7 +324,9 @@ const userRoutes = (db) => {
         { $set: { joinedProjects: updatedProjects } }
       );
 
-      res.status(200).json({success: true, message: "Project status updated", result });
+      res
+        .status(200)
+        .json({ success: true, message: "Project status updated", result });
     } catch (error) {
       console.error("Error switching project status:", error);
       res.status(500).json({ error: "Internal Server Error" });
