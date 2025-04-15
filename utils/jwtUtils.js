@@ -10,13 +10,23 @@ const generateRefreshToken = (payload) => {
     return jwt.sign(payload, REFRESH_TOKEN_SECRET_KEY, { expiresIn: '30d' }); 
 };
 
-const verifyAccessToken = (token) => {
-    try {
-        return jwt.verify(token, SECRET_KEY);
-    } catch (error) {
-        return null;
+const verifyAccessToken = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+  
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ success: false, error: "Access denied. No token provided." });
     }
-};
+  
+    const token = authHeader.split(" ")[1];
+  
+    try {
+      const decoded = jwt.verify(token, SECRET_KEY);
+      req.user = decoded;
+      next();
+    } catch (error) {
+      return res.status(403).json({ success: false, error: "Invalid or expired token." });
+    }
+  };
 
 const verifyRefreshToken = (token) => {
     try {

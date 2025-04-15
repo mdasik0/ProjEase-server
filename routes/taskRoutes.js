@@ -2,13 +2,15 @@ const express = require("express");
 const { ObjectId } = require("mongodb");
 const { v4: uuidv4 } = require("uuid");
 
+const { verifyAccessToken } = require("../utils/jwtUtils");
+
 const taskRoutes = (db) => {
   const router = express.Router();
   const tasksCollection = db.collection("tasks");
   const projectTasksCollection = db.collection("projectTasks");
 
   // Create tasks
-  router.post("/createTasks/:taskInitId", async (req, res) => {
+  router.post("/createTasks/:taskInitId", verifyAccessToken, async (req, res) => {
     const taskInitId = req.params.taskInitId;
     try {
       const task = req.body;
@@ -30,7 +32,7 @@ const taskRoutes = (db) => {
     }
   });
 
-  router.get("/tasks/status-summary", async (req, res) => {
+  router.get("/tasks/status-summary", verifyAccessToken, async (req, res) => {
     const projectId = req.query.ids;
 
     // console.log("projectId", projectId);
@@ -65,7 +67,7 @@ const taskRoutes = (db) => {
   });
 
   // Update task status
-  router.patch("/updateTaskStatus/:id", async (req, res) => {
+  router.patch("/updateTaskStatus/:id", verifyAccessToken, async (req, res) => {
     try {
       const id = req.params.id;
       const task = await tasksCollection.findOne({ _id: new ObjectId(id) });
@@ -119,13 +121,13 @@ const taskRoutes = (db) => {
   });
 
   // Get all tasks
-  router.get("/tasks", async (req, res) => {
+  router.get("/tasks", verifyAccessToken, async (req, res) => {
     const result = await tasksCollection.find().toArray();
     res.send(result);
   });
 
   // Get all Tasks related to a project with multiple Ids
-  router.get("/allTasks", async (req, res) => {
+  router.get("/allTasks",verifyAccessToken, async (req, res) => {
     const allTasksIdStr = req.query.ids; // Extract the comma-separated string from the query
 
     if (!allTasksIdStr) {
@@ -168,7 +170,7 @@ const taskRoutes = (db) => {
   });
 
   // Delete One task
-  router.delete("/deleteTasks/:id", async (req, res) => {
+  router.delete("/deleteTasks/:id",verifyAccessToken, async (req, res) => {
     const id = req.params.id;
     try {
       const result = await tasksCollection.deleteOne({
@@ -191,7 +193,7 @@ const taskRoutes = (db) => {
   });
 
   // Add steps to a task
-  router.patch("/createSteps/:id", async (req, res) => {
+  router.patch("/createSteps/:id", verifyAccessToken, async (req, res) => {
     const id = req.params.id;
     const body = req.body;
     const stepWithId = { ...body, _id: uuidv4() };
@@ -212,7 +214,7 @@ const taskRoutes = (db) => {
   });
 
   // complete the step within a task
-  router.patch("/completeSteps/:id", async (req, res) => {
+  router.patch("/completeSteps/:id", verifyAccessToken, async (req, res) => {
     const id = req.params.id;
     const { stepid } = req.body;
     const idQuery = { _id: new ObjectId(id) };
@@ -238,7 +240,7 @@ const taskRoutes = (db) => {
   });
 
   // delete specific step
-  router.patch("/deleteSteps/:id", async (req, res) => {
+  router.patch("/deleteSteps/:id", verifyAccessToken, async (req, res) => {
     const mainObjId = req.params.id;
     const { stepid } = req.body;
     const result = await tasksCollection.updateOne(
@@ -261,7 +263,7 @@ const taskRoutes = (db) => {
   });
 
   //get task init for project to fetch tasks
-  router.get("/getTasksInit/:taskId", async (req, res) => {
+  router.get("/getTasksInit/:taskId", verifyAccessToken, async (req, res) => {
     const taskId = req.params.taskId.trim();
 
     try {

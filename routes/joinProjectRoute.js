@@ -1,6 +1,6 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
-
+const { verifyAccessToken } = require("../utils/jwtUtils");
 const joinProjectRoute = (db) => {
   const router = express.Router();
   // db collections
@@ -8,7 +8,7 @@ const joinProjectRoute = (db) => {
   const usersCollection = db.collection("users");
 
   // join project api
-  router.post("/join-project", async (req, res) => {
+  router.post("/join-project", verifyAccessToken, async (req, res) => {
     const { projId, password, userId, invited } = req.body;
     try {
       const projObjectId = new ObjectId(String(projId));

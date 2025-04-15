@@ -1,6 +1,8 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
 
+const { verifyAccessToken } = require("../utils/jwtUtils");
+
 const messagesRoutes = (db) => {
   const router = express.Router();
 
@@ -8,33 +10,32 @@ const messagesRoutes = (db) => {
   const messageCollection = db.collection("messages");
   const chatGroupCollection = db.collection("chat-group");
 
-  router.get("/unseenMessageCount/:projectId/:userId", async (req, res) => {
+  router.get("/unseenMessageCount/:projectId/:userId", verifyAccessToken, async (req, res) => {
     const { projectId, userId } = req.params;
-  
+
     try {
       // Fetch chat group document based on projectId
       const response = await chatGroupCollection.findOne({
         projectId: new ObjectId(String(projectId)),
       });
-  
+
       if (!response) {
         return res.status(404).send({ message: "Chat group not found" });
       }
-  
-        const userUnseenMessageCount =
-    response?.unseenMessageCount && userId in response.unseenMessageCount
-      ? response.unseenMessageCount[userId]
-      : null;
-  
+
+      const userUnseenMessageCount =
+        response?.unseenMessageCount && userId in response.unseenMessageCount
+          ? response.unseenMessageCount[userId]
+          : null;
+
       res.status(200).send({ unseenCount: userUnseenMessageCount });
     } catch (error) {
       console.error(error);
       res.status(500).send({ message: "Server error" });
     }
   });
-  
 
-  router.get("/chat-group/:projectId", async (req, res) => {
+  router.get("/chat-group/:projectId", verifyAccessToken, async (req, res) => {
     const projectId = req.params.projectId;
     try {
       const response = await chatGroupCollection.findOne({
@@ -47,7 +48,7 @@ const messagesRoutes = (db) => {
         .send("error occurred in chat-group route: ", error.message);
     }
   });
-  router.get("/messages/:groupId", async (req, res) => {
+  router.get("/messages/:groupId", verifyAccessToken, async (req, res) => {
     const groupId = req.params.groupId;
 
     try {

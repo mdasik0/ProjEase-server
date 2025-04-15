@@ -1,6 +1,6 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
-const { generateAccessToken } = require("../utils/jwtUtils");
+const { generateAccessToken, verifyAccessToken } = require("../utils/jwtUtils");
 const userRoutes = (db) => {
   const router = express.Router();
   const usersCollection = db.collection("users");
@@ -29,7 +29,6 @@ const userRoutes = (db) => {
         return res.status(200).json({
           success: false,
           message: "User already exists",
-          token, // send token
         });
       }
 
@@ -59,7 +58,7 @@ const userRoutes = (db) => {
   });
 
   // Get All Users Route
-  router.get("/get-all-users", async (req, res) => {
+  router.get("/get-all-users", verifyAccessToken, async (req, res) => {
     try {
       const result = await usersCollection.find().toArray();
       res.status(200).json(result);
@@ -68,10 +67,9 @@ const userRoutes = (db) => {
     }
   });
 
-  router.get("/getUser/:email", async (req, res) => {
+  router.get("/getUser/:email",verifyAccessToken, async (req, res) => {
     try {
       const email = req.params.email;
-      // Query for a single user by email
       const result = await usersCollection.findOne({ email: email });
 
       if (result) {
@@ -84,7 +82,7 @@ const userRoutes = (db) => {
     }
   });
 
-  router.get("/getMultUsers", async (req, res) => {
+  router.get("/getMultUsers", verifyAccessToken, async (req, res) => {
     const userIdsArr = req.query.userIds;
 
     const allMembers = userIdsArr
@@ -126,7 +124,7 @@ const userRoutes = (db) => {
   });
 
   // Email Login Route
-  router.get("/emailLogin/:email", async (req, res) => {
+  router.get("/emailLogin/:email", verifyAccessToken,  async (req, res) => {
     try {
       const email = req.params.email;
       const result = await usersCollection.findOne({ email: email });
@@ -151,7 +149,7 @@ const userRoutes = (db) => {
     }
   });
 
-  router.patch("/updateProfilePicture/:id", async (req, res) => {
+  router.patch("/updateProfilePicture/:id",verifyAccessToken, async (req, res) => {
     const id = req.params.id;
     const image = req.body;
 
@@ -179,7 +177,7 @@ const userRoutes = (db) => {
     }
   });
 
-  router.patch("/updateUser/:id", async (req, res) => {
+  router.patch("/updateUser/:id",verifyAccessToken, async (req, res) => {
     try {
       const id = req.params.id;
       const body = req.body; // Exclude _id from the body
@@ -210,7 +208,7 @@ const userRoutes = (db) => {
   });
 
   // Update User Name Route
-  router.patch("/updateName/:id", async (req, res) => {
+  router.patch("/updateName/:id",verifyAccessToken, async (req, res) => {
     const id = req.params.id;
     const name = req.body;
 
@@ -239,7 +237,7 @@ const userRoutes = (db) => {
     }
   });
 
-  router.patch("/users/:id/joined-projects", async (req, res) => {
+  router.patch("/users/:id/joined-projects", verifyAccessToken, async (req, res) => {
     const id = req.params.id; // User ID
     const newProject = req.body; // New project object to be added (e.g., { projectId, status })
 
@@ -295,7 +293,7 @@ const userRoutes = (db) => {
     }
   });
 
-  router.patch("/switch-project-status", async (req, res) => {
+  router.patch("/switch-project-status", verifyAccessToken, async (req, res) => {
     const projectId = req.query.projectId;
     const userId = req.query.userId;
 

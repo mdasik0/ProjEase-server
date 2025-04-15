@@ -1,6 +1,8 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
 
+const { verifyAccessToken } = require("../utils/jwtUtils");
+
 const invitationRoute = (db) => {
   const router = express.Router();
   // db collection
@@ -22,7 +24,7 @@ const invitationRoute = (db) => {
     }
   });
 
-  router.post("/invite-members", async (req, res) => {
+  router.post("/invite-members", verifyAccessToken, async (req, res) => {
     const invitationInfo = req.body;
     // if (invitationInfo.length ===0) {
     //   res.status(404).send({success: false, message: "Please enter an email address."})

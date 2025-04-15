@@ -1,5 +1,6 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
+const { verifyAccessToken } = require("../utils/jwtUtils")
 
 const projectRoutes = (db) => {
   const router = express.Router();
@@ -10,7 +11,7 @@ const projectRoutes = (db) => {
   const announcementsCollection = db.collection("announcements");
 
   //API routes
-  router.post("/project", async (req, res) => {
+  router.post("/project",verifyAccessToken, async (req, res) => {
     try {
       const project = req.body;
 
@@ -70,12 +71,12 @@ const projectRoutes = (db) => {
     }
   });
 
-  router.get("/get-all-projects", async (req, res) => {
+  router.get("/get-all-projects",verifyAccessToken, async (req, res) => {
     const result = await projectsCollection.find().toArray();
     res.send(result);
   });
 
-  router.patch("/project/:projectId", async (req, res) => {
+  router.patch("/project/:projectId",verifyAccessToken, async (req, res) => {
     const projectId = req.params.projectId;
     const body = req.body;
     try {
@@ -99,7 +100,7 @@ const projectRoutes = (db) => {
     }
   });
 
-  router.get("/getProject/:projectId", async (req, res) => {
+  router.get("/getProject/:projectId",verifyAccessToken, async (req, res) => {
     const projectId = req.params.projectId;
     try {
       const result = await projectsCollection.findOne({
@@ -112,7 +113,7 @@ const projectRoutes = (db) => {
     }
   });
 
-  router.post("/announcement", async (req, res) => {
+  router.post("/announcement",verifyAccessToken, async (req, res) => {
     const announcement = req.body;
 
     if (!announcement.projectId) {
@@ -147,7 +148,7 @@ const projectRoutes = (db) => {
     }
   });
 
-  router.get("/announcement/:projectId", async (req, res) => {
+  router.get("/announcement/:projectId",verifyAccessToken, async (req, res) => {
     const projectId = req.params.projectId;
     try {
       const result = await announcementsCollection
@@ -160,7 +161,7 @@ const projectRoutes = (db) => {
     }
   });
 
-  router.post("/joinedProjectsInfo", async (req, res) => {
+  router.post("/joinedProjectsInfo",verifyAccessToken, async (req, res) => {
     try {
       const body = req.body; // [{ projectId, status }]
       if (!Array.isArray(body)) {
