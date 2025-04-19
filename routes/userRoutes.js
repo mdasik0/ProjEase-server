@@ -1,6 +1,6 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
-const { generateAccessToken, verifyAccessToken } = require("../utils/jwtUtils");
+const { generateAccessToken, verifyAccessToken, generateRefreshToken,verifyRefreshToken } = require("../utils/jwtUtils");
 const userRoutes = (db) => {
   const router = express.Router();
   const usersCollection = db.collection("users");
@@ -16,8 +16,15 @@ const userRoutes = (db) => {
 
       // Generate JWT token
       const token = generateAccessToken({ email: userInfo.email });
+      const refreshToken = generateRefreshToken({ email: userInfo.email });
 
       if (userAlreadyExists && userInfo.login_method === "google") {
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: false, // only true in HTTPS production
+          sameSite: "lax", // must NOT be "none" without secure
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
         return res.status(200).json({
           success: false,
           message: `Welcome back ${userAlreadyExists.name.firstname} ${userAlreadyExists.name.lastname}`,
@@ -34,6 +41,14 @@ const userRoutes = (db) => {
 
       const result = await usersCollection.insertOne(userInfo);
       if (result.acknowledged) {
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: false, // only true in HTTPS production
+          sameSite: "lax", // must NOT be "none" without secure
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        
         return res.status(201).json({
           success: true,
           message: "User created successfully",
@@ -124,13 +139,24 @@ const userRoutes = (db) => {
   });
 
   // Email Login Route
-  router.get("/emailLogin/:email", verifyAccessToken,  async (req, res) => {
+  router.get("/emailLogin/:email",  async (req, res) => {
     try {
       const email = req.params.email;
       const result = await usersCollection.findOne({ email: email });
 
+      const token = generateAccessToken({email: email})
+      const refreshToken = generateRefreshToken({email: email})
+
+      
       if (result) {
-        res.status(200).send({
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: false, // only true in HTTPS production
+          sameSite: "lax", // must NOT be "none" without secure
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+        
+       return res.status(200).send({
           success: true,
           method: "email-login",
           message: result.name
@@ -138,12 +164,13 @@ const userRoutes = (db) => {
             : "Welcome back! Complete your profile to unlock the full experience.",
           userImageExists: result.image,
           userNameExists: result.name,
+          token: token
         });
       } else {
-        res.status(404).json({ success: false, message: "User not found" });
+        return res.status(404).json({ success: false, message: "User not found" });
       }
     } catch (error) {
-      res
+      return res
         .status(500)
         .json({ success: false, error: "Error fetching user data" });
     }
@@ -329,6 +356,25 @@ const userRoutes = (db) => {
       console.error("Error switching project status:", error);
       res.status(500).json({ error: "Internal Server Error" });
     }
+  });
+
+  router.post("/refresh-token", (req, res) => {
+    const refreshToken = req.cookies.refreshToken; 
+  
+    console.log(refreshToken)
+    if (!refreshToken) {
+      return res.status(401).json({ message: "Refresh token not found" });
+    }
+  
+    const decoded = verifyRefreshToken(refreshToken);
+  
+    if (!decoded) {
+      return res.status(403).json({ message: "Invalid or expired refresh token" });
+    }
+  
+    const newAccessToken = generateAccessToken({ email: decoded.email })
+  
+    return res.json({ accessToken: newAccessToken });
   });
 
   return router;

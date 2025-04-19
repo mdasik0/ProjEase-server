@@ -8,13 +8,18 @@ const projectRoutes = require("./routes/projectRoutes");
 const joinProjectRoute = require("./routes/joinProjectRoute");
 const invitationRoute = require("./routes/invitationRoutes");
 const { connectToDB } = require("./db/dbConnect");
+const cookieParser = require("cookie-parser");
 // App setup
 const app = express();
 const server = http.createServer(app);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', 
+  credentials: true,
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 const setupSockets = require("./socket");
 const messagesRoutes = require("./routes/messagesRoutes");
