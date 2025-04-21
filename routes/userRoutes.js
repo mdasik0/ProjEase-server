@@ -358,7 +358,7 @@ const userRoutes = (db) => {
     }
   });
 
-  router.post("/refresh-token", (req, res) => {
+  router.post("/refresh-token", async (req, res) => {
     const refreshToken = req.cookies.refreshToken; 
   
     console.log(refreshToken)
@@ -377,6 +377,15 @@ const userRoutes = (db) => {
     return res.json({ accessToken: newAccessToken });
   });
 
+  router.delete("/remove-refresh-token", async (req, res) => {
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      path: "/",
+    });
+    return res.status(200).json({ message: "Refresh token removed" });
+  })
   return router;
 };
 
