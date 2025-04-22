@@ -124,7 +124,7 @@ module.exports = (server, db) => {
 
       try {
         const responseFromSendingMessage = await messageCollection.insertOne(messageObject);
-        console.log("🚀 ~ socket.on ~ responseFromSendingMessage:", responseFromSendingMessage)
+        // console.log("🚀 ~ socket.on ~ responseFromSendingMessage:", responseFromSendingMessage)
         if(!responseFromSendingMessage.insertedId) {
           socket.emit("error", { message: "Failed to send message." });
         }

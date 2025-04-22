@@ -269,7 +269,7 @@ const taskRoutes = (db) => {
     try {
       // Validate taskId
       if (!taskId || !ObjectId.isValid(taskId)) {
-        return console.log("No taskId provided.");
+        return res.send("No taskId provided.");
       }
 
       const result = await projectTasksCollection.findOne({

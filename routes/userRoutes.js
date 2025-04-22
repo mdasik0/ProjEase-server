@@ -361,7 +361,6 @@ const userRoutes = (db) => {
   router.post("/refresh-token", async (req, res) => {
     const refreshToken = req.cookies.refreshToken; 
   
-    console.log(refreshToken)
     if (!refreshToken) {
       return res.status(401).json({ message: "Refresh token not found" });
     }
