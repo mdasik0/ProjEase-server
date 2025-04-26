@@ -358,6 +358,27 @@ const userRoutes = (db) => {
     }
   });
 
+  router.patch("/change-online-status/:id", async (req, res) => {
+    const userId = req.params.id;
+    const status = req.body;
+
+    if (!userId || !status) {
+      return res.status(400).json({ error: "Missing userId or status" });
+    }
+
+    try {
+      const response = await usersCollection.updateOne({_id: new ObjectId(String(userId)) }, { $set: { onlineStatus: status.status } });
+      if (response.modifiedCount === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.status(200).json({ success: true, message: "Online status updated" });
+    } catch (error) {
+      console.error("Error changing online status:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+      
+    }
+  })
+
   router.post("/refresh-token", async (req, res) => {
     const refreshToken = req.cookies.refreshToken; 
   
