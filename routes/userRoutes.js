@@ -358,7 +358,7 @@ const userRoutes = (db) => {
     }
   });
 
-  router.patch("/change-online-status/:id", async (req, res) => {
+  router.patch("/change-online-status/:id", verifyAccessToken, async (req, res) => {
     const userId = req.params.id;
     const status = req.body;
 
