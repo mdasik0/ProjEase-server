@@ -21,7 +21,7 @@ const userRoutes = (db) => {
       if (userAlreadyExists && userInfo.login_method === "google") {
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: false, // only true in HTTPS production
+          secure: true, // only true in HTTPS production
           sameSite: "lax", // must NOT be "none" without secure
           maxAge: 30 * 24 * 60 * 60 * 1000,
         });
@@ -43,7 +43,7 @@ const userRoutes = (db) => {
       if (result.acknowledged) {
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: false, // only true in HTTPS production
+          secure: true, // only true in HTTPS production
           sameSite: "lax", // must NOT be "none" without secure
           maxAge: 30 * 24 * 60 * 60 * 1000,
         });
