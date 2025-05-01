@@ -15,7 +15,7 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(cors({
-  origin: ['https://projease-client.vercel.app', 'http://localhost:5173'],
+  origin: ['https://proj-ease.vercel.app', 'http://localhost:5173'],
   credentials: true,
 }));
 
