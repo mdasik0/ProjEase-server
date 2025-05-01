@@ -48,8 +48,8 @@ const userRoutes = (db) => {
       if (result.acknowledged) {
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: true, // only true in HTTPS production
-          sameSite: "lax", // must NOT be "none" without secure
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // must NOT be "none" without secure
           maxAge: 30 * 24 * 60 * 60 * 1000,
         });
 
