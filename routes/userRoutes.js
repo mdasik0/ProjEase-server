@@ -1,6 +1,11 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
-const { generateAccessToken, verifyAccessToken, generateRefreshToken,verifyRefreshToken } = require("../utils/jwtUtils");
+const {
+  generateAccessToken,
+  verifyAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} = require("../utils/jwtUtils");
 const userRoutes = (db) => {
   const router = express.Router();
   const usersCollection = db.collection("users");
@@ -22,7 +27,7 @@ const userRoutes = (db) => {
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "lax", // must NOT be "none" without secure
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // must NOT be "none" without secure
           maxAge: 30 * 24 * 60 * 60 * 1000,
         });
         return res.status(200).json({
@@ -48,7 +53,6 @@ const userRoutes = (db) => {
           maxAge: 30 * 24 * 60 * 60 * 1000,
         });
 
-        
         return res.status(201).json({
           success: true,
           message: "User created successfully",
@@ -82,7 +86,7 @@ const userRoutes = (db) => {
     }
   });
 
-  router.get("/getUser/:email",verifyAccessToken, async (req, res) => {
+  router.get("/getUser/:email", verifyAccessToken, async (req, res) => {
     try {
       const email = req.params.email;
       const result = await usersCollection.findOne({ email: email });
@@ -139,15 +143,14 @@ const userRoutes = (db) => {
   });
 
   // Email Login Route
-  router.get("/emailLogin/:email",  async (req, res) => {
+  router.get("/emailLogin/:email", async (req, res) => {
     try {
       const email = req.params.email;
       const result = await usersCollection.findOne({ email: email });
 
-      const token = generateAccessToken({email: email})
-      const refreshToken = generateRefreshToken({email: email})
+      const token = generateAccessToken({ email: email });
+      const refreshToken = generateRefreshToken({ email: email });
 
-      
       if (result) {
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
@@ -155,8 +158,8 @@ const userRoutes = (db) => {
           sameSite: "lax", // must NOT be "none" without secure
           maxAge: 30 * 24 * 60 * 60 * 1000,
         });
-        
-       return res.status(200).send({
+
+        return res.status(200).send({
           success: true,
           method: "email-login",
           message: result.name
@@ -164,10 +167,12 @@ const userRoutes = (db) => {
             : "Welcome back! Complete your profile to unlock the full experience.",
           userImageExists: result.image,
           userNameExists: result.name,
-          token: token
+          token: token,
         });
       } else {
-        return res.status(404).json({ success: false, message: "User not found" });
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
       }
     } catch (error) {
       return res
@@ -176,35 +181,39 @@ const userRoutes = (db) => {
     }
   });
 
-  router.patch("/updateProfilePicture/:id",verifyAccessToken, async (req, res) => {
-    const id = req.params.id;
-    const image = req.body;
+  router.patch(
+    "/updateProfilePicture/:id",
+    verifyAccessToken,
+    async (req, res) => {
+      const id = req.params.id;
+      const image = req.body;
 
-    // console.log(image);
+      // console.log(image);
 
-    try {
-      const result = await usersCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $set: { image: image?.data } }
-      );
+      try {
+        const result = await usersCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { image: image?.data } }
+        );
 
-      if (result.matchedCount === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "Can not update your image. Try again!",
+        if (result.matchedCount === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "Can not update your image. Try again!",
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: "Profile picture updated! You're all set!",
         });
+      } catch (error) {
+        return res.status(500).json({ error: "Error updating user" });
       }
-
-      return res.status(200).json({
-        success: true,
-        message: "Profile picture updated! You're all set!",
-      });
-    } catch (error) {
-      return res.status(500).json({ error: "Error updating user" });
     }
-  });
+  );
 
-  router.patch("/updateUser/:id",verifyAccessToken, async (req, res) => {
+  router.patch("/updateUser/:id", verifyAccessToken, async (req, res) => {
     try {
       const id = req.params.id;
       const body = req.body; // Exclude _id from the body
@@ -235,7 +244,7 @@ const userRoutes = (db) => {
   });
 
   // Update User Name Route
-  router.patch("/updateName/:id",verifyAccessToken, async (req, res) => {
+  router.patch("/updateName/:id", verifyAccessToken, async (req, res) => {
     const id = req.params.id;
     const name = req.body;
 
@@ -264,136 +273,156 @@ const userRoutes = (db) => {
     }
   });
 
-  router.patch("/users/:id/joined-projects", verifyAccessToken, async (req, res) => {
-    const id = req.params.id; // User ID
-    const newProject = req.body; // New project object to be added (e.g., { projectId, status })
+  router.patch(
+    "/users/:id/joined-projects",
+    verifyAccessToken,
+    async (req, res) => {
+      const id = req.params.id; // User ID
+      const newProject = req.body; // New project object to be added (e.g., { projectId, status })
 
-    try {
-      // Ensure `newProject` is provided and has the required fields
-      if (!newProject.projectId || !newProject.status) {
-        return res.status(400).send({
+      try {
+        // Ensure `newProject` is provided and has the required fields
+        if (!newProject.projectId || !newProject.status) {
+          return res.status(400).send({
+            success: false,
+            message:
+              "Invalid data. The projectId and status fields are required.",
+          });
+        }
+
+        // Step 1: Ensure `joinedProjects` exists as an array
+        await usersCollection.updateOne(
+          { _id: new ObjectId(id), joinedProjects: { $exists: false } },
+          { $set: { joinedProjects: [] } }
+        );
+
+        // Step 2: Update all existing projects to have status `passive`
+        await usersCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              "joinedProjects.$[].status": "passive", // Set all statuses in the array to "passive"
+            },
+          }
+        );
+
+        // Step 3: Push the new project into the array
+        const updateResult = await usersCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $push: { joinedProjects: newProject } }
+        );
+
+        if (updateResult.modifiedCount > 0) {
+          return res.status(200).send({
+            success: true,
+            message: "This project is now marked as active.",
+          });
+        }
+
+        return res.status(404).send({
           success: false,
-          message:
-            "Invalid data. The projectId and status fields are required.",
+          message: "User not found.",
+        });
+      } catch (error) {
+        console.error("Error updating joinedProjects:", error);
+        return res.status(500).send({
+          success: false,
+          message: "An unexpected error occurred.",
         });
       }
+    }
+  );
 
-      // Step 1: Ensure `joinedProjects` exists as an array
-      await usersCollection.updateOne(
-        { _id: new ObjectId(id), joinedProjects: { $exists: false } },
-        { $set: { joinedProjects: [] } }
-      );
+  router.patch(
+    "/switch-project-status",
+    verifyAccessToken,
+    async (req, res) => {
+      const projectId = req.query.projectId;
+      const userId = req.query.userId;
 
-      // Step 2: Update all existing projects to have status `passive`
-      await usersCollection.updateOne(
-        { _id: new ObjectId(id) },
-        {
-          $set: {
-            "joinedProjects.$[].status": "passive", // Set all statuses in the array to "passive"
-          },
-        }
-      );
+      if (!projectId || !userId) {
+        return res.status(400).json({ error: "Missing projectId or userId" });
+      }
 
-      // Step 3: Push the new project into the array
-      const updateResult = await usersCollection.updateOne(
-        { _id: new ObjectId(id) },
-        { $push: { joinedProjects: newProject } }
-      );
-
-      if (updateResult.modifiedCount > 0) {
-        return res.status(200).send({
-          success: true,
-          message: "This project is now marked as active.",
+      try {
+        const user = await usersCollection.findOne({
+          _id: new ObjectId(userId),
         });
-      }
-
-      return res.status(404).send({
-        success: false,
-        message: "User not found.",
-      });
-    } catch (error) {
-      console.error("Error updating joinedProjects:", error);
-      return res.status(500).send({
-        success: false,
-        message: "An unexpected error occurred.",
-      });
-    }
-  });
-
-  router.patch("/switch-project-status", verifyAccessToken, async (req, res) => {
-    const projectId = req.query.projectId;
-    const userId = req.query.userId;
-
-    if (!projectId || !userId) {
-      return res.status(400).json({ error: "Missing projectId or userId" });
-    }
-
-    try {
-      const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      const updatedProjects = (user.joinedProjects || []).map((project) => {
-        if (project.projectId === projectId) {
-          return {
-            ...project,
-            status: project.status === "active" ? "passive" : "active",
-          };
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
         }
-        return project;
-      });
 
-      const result = await usersCollection.updateOne(
-        { _id: new ObjectId(userId) },
-        { $set: { joinedProjects: updatedProjects } }
-      );
+        const updatedProjects = (user.joinedProjects || []).map((project) => {
+          if (project.projectId === projectId) {
+            return {
+              ...project,
+              status: project.status === "active" ? "passive" : "active",
+            };
+          }
+          return project;
+        });
 
-      res
-        .status(200)
-        .json({ success: true, message: "Project status updated", result });
-    } catch (error) {
-      console.error("Error switching project status:", error);
-      res.status(500).json({ error: "Internal Server Error" });
-    }
-  });
+        const result = await usersCollection.updateOne(
+          { _id: new ObjectId(userId) },
+          { $set: { joinedProjects: updatedProjects } }
+        );
 
-  router.patch("/change-online-status/:id", verifyAccessToken, async (req, res) => {
-    const userId = req.params.id;
-    const status = req.body;
-
-    if (!userId || !status) {
-      return res.status(400).json({ error: "Missing userId or status" });
-    }
-
-    try {
-      const response = await usersCollection.updateOne({_id: new ObjectId(String(userId)) }, { $set: { onlineStatus: status.status } });
-      if (response.modifiedCount === 0) {
-        return res.status(404).json({ error: "User not found" });
+        res
+          .status(200)
+          .json({ success: true, message: "Project status updated", result });
+      } catch (error) {
+        console.error("Error switching project status:", error);
+        res.status(500).json({ error: "Internal Server Error" });
       }
-      res.status(200).json({ success: true, message: "Online status updated" });
-    } catch (error) {
-      console.error("Error changing online status:", error);
-      res.status(500).json({ error: "Internal Server Error" });
-      
     }
-  })
+  );
+
+  router.patch(
+    "/change-online-status/:id",
+    verifyAccessToken,
+    async (req, res) => {
+      const userId = req.params.id;
+      const status = req.body;
+
+      if (!userId || !status) {
+        return res.status(400).json({ error: "Missing userId or status" });
+      }
+
+      try {
+        const response = await usersCollection.updateOne(
+          { _id: new ObjectId(String(userId)) },
+          { $set: { onlineStatus: status.status } }
+        );
+        if (response.modifiedCount === 0) {
+          return res.status(404).json({ error: "User not found" });
+        }
+        res
+          .status(200)
+          .json({ success: true, message: "Online status updated" });
+      } catch (error) {
+        console.error("Error changing online status:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      }
+    }
+  );
 
   router.post("/refresh-token", async (req, res) => {
-    const refreshToken = req.cookies.refreshToken; 
-  
+    const refreshToken = req.cookies.refreshToken;
+
     if (!refreshToken) {
       return res.status(401).json({ message: "Refresh token not found" });
     }
-  
+
     const decoded = verifyRefreshToken(refreshToken);
-  
+
     if (!decoded) {
-      return res.status(403).json({ message: "Invalid or expired refresh token" });
+      return res
+        .status(403)
+        .json({ message: "Invalid or expired refresh token" });
     }
-  
-    const newAccessToken = generateAccessToken({ email: decoded.email })
-  
+
+    const newAccessToken = generateAccessToken({ email: decoded.email });
+
     return res.json({ accessToken: newAccessToken });
   });
 
@@ -405,7 +434,7 @@ const userRoutes = (db) => {
       path: "/",
     });
     return res.status(200).json({ message: "Refresh token removed" });
-  })
+  });
   return router;
 };
 
