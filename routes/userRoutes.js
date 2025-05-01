@@ -429,8 +429,8 @@ const userRoutes = (db) => {
   router.delete("/remove-refresh-token", async (req, res) => {
     res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: true,
+      sameSite: "none",
       path: "/",
     });
     return res.status(200).json({ message: "Refresh token removed" });
