@@ -11,7 +11,7 @@ module.exports = (server, db) => {
   const io = new Server(server, {
     cors: {
       origin: "https://projease-client.vercel.app",
-      methods: ["GET", "POST"],
+      methods: ["GET", "POST", "OPTIONS"],
       credentials: true,
     },
   });
