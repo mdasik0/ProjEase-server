@@ -24,4 +24,4 @@ ProjEase is a project management platform designed to streamline team collaborat
 
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/your-username/proj-ease-backend.git](https://github.com/mdasik0/ProjEase-server.git)
+   git clone https://github.com/mdasik0/ProjEase-server.git
