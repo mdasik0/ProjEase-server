@@ -1,3 +1,5 @@
+<img src="https://i.ibb.co.com/6cMzRsHm/MINI-LOGO-FOR-WHITE-BG.png" alt="ProjEase Logo" width="50" height="50" />
+
 # ProjEase Backend
 
 ## Description
@@ -16,7 +18,6 @@ ProjEase is a project management platform designed to streamline team collaborat
 - **MongoDB**: NoSQL database to store user, project, and task data.
 - **Socket.io**: Real-time bidirectional event-based communication for chat features.
 - **JWT Authentication**: JSON Web Tokens for secure and stateless authentication.
-- **Mongoose**: ODM (Object Data Modeling) library for MongoDB and Node.js.
 - **dotenv**: Manage environment variables.
 - **CORS**: Middleware to handle cross-origin resource sharing.
 
