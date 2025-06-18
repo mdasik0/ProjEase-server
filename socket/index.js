@@ -10,7 +10,7 @@ module.exports = (server, db) => {
 
   const io = new Server(server, {
     cors: {
-      origin: "https://proj-ease.vercel.app",
+      origin: process.env.CORS_ORIGIN_URL,
       methods: ["GET", "POST", "OPTIONS"],
       credentials: true,
     },

@@ -10,7 +10,7 @@ const userRoutes = (db) => {
   const router = express.Router();
   const usersCollection = db.collection("users");
 
-  // social and email user creation route
+  // social and email user create
   router.post("/createUser", async (req, res) => {
     try {
       const userInfo = req.body;
@@ -18,24 +18,18 @@ const userRoutes = (db) => {
       const userAlreadyExists = await usersCollection.findOne({
         email: userInfo.email,
       });
-
-      // Generate JWT token
-      const token = generateAccessToken({ email: userInfo.email });
-      const refreshToken = generateRefreshToken({ email: userInfo.email });
-
+      // if user already exists different responses for 'google' and 'email' login method
       if (userAlreadyExists && userInfo.login_method === "google") {
-        res.cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure:true,
-          sameSite: "none", // must NOT be "none" without secure
-          maxAge: 30 * 24 * 60 * 60 * 1000,
-        });
+        const token = generateAccessToken({ email: userInfo.email });
+        const refreshToken = generateRefreshToken({ email: userInfo.email });
+
         return res.status(200).json({
-          success: false,
+          googleLogin: true,
           message: `Welcome back ${userAlreadyExists.name.firstname} ${userAlreadyExists.name.lastname}`,
           userNameExists: userAlreadyExists.name,
           userImageExists: userAlreadyExists.image,
-          token, // send token even if user already exists
+          token,
+          refreshToken,
         });
       } else if (userAlreadyExists && userInfo.login_method === "email") {
         return res.status(200).json({
@@ -44,21 +38,19 @@ const userRoutes = (db) => {
         });
       }
 
+      // if user do not exist already user insert confirmed
       const result = await usersCollection.insertOne(userInfo);
-      if (result.acknowledged) {
-        res.cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure:true,
-          sameSite: "none", // must NOT be "none" without secure
-          maxAge: 30 * 24 * 60 * 60 * 1000,
-        });
 
+      if (result.acknowledged) {
+        const token = generateAccessToken({ email: userInfo.email });
+        const refreshToken = generateRefreshToken({ email: userInfo.email });
         return res.status(201).json({
           success: true,
           message: "User created successfully",
           userImageExists: null,
           userNameExists: null,
-          token, // send token
+          token,
+          refreshToken, // send token
         });
       } else {
         return res.status(500).json({
@@ -152,13 +144,6 @@ const userRoutes = (db) => {
       const refreshToken = generateRefreshToken({ email: email });
 
       if (result) {
-        res.cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure:true,
-          sameSite: "none", // must NOT be "none" without secure
-          maxAge: 30 * 24 * 60 * 60 * 1000,
-        });
-
         return res.status(200).send({
           success: true,
           method: "email-login",
@@ -168,6 +153,7 @@ const userRoutes = (db) => {
           userImageExists: result.image,
           userNameExists: result.name,
           token: token,
+          refreshToken,
         });
       } else {
         return res
@@ -407,8 +393,8 @@ const userRoutes = (db) => {
   );
 
   router.post("/refresh-token", async (req, res) => {
-    const refreshToken = req.cookies.refreshToken;
-
+    const refreshToken = res.query.refresh;
+    console.log(refreshToken)
     if (!refreshToken) {
       return res.status(401).json({ message: "Refresh token not found" });
     }
@@ -426,15 +412,6 @@ const userRoutes = (db) => {
     return res.json({ accessToken: newAccessToken });
   });
 
-  router.delete("/remove-refresh-token", async (req, res) => {
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      path: "/",
-    });
-    return res.status(200).json({ message: "Refresh token removed" });
-  });
   return router;
 };
 
