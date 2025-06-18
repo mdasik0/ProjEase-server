@@ -16,6 +16,7 @@ module.exports = (server, db) => {
     },
   });
 
+  
   io.on("connection", (socket) => {
     console.log("A user connected", socket.id);
 
