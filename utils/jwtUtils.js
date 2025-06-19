@@ -3,11 +3,11 @@ const SECRET_KEY = process.env.JWT_SECRET_KEY;
 const REFRESH_TOKEN_SECRET_KEY = process.env.JWT_REFRESH_SECRET_KEY; 
 
 const generateAccessToken = (payload) => {
-    return jwt.sign(payload, SECRET_KEY, { expiresIn: '1h' });
+    return jwt.sign(payload, SECRET_KEY, { expiresIn: '2m' });
 };
 
 const generateRefreshToken = (payload) => {
-    return jwt.sign(payload, REFRESH_TOKEN_SECRET_KEY, { expiresIn: '30d' }); 
+    return jwt.sign(payload, REFRESH_TOKEN_SECRET_KEY, { expiresIn: '10m' }); 
 };
 
 const verifyAccessToken = (req, res, next) => {
