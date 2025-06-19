@@ -15,7 +15,7 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(cors({
-  origin: [process.env.CORS_ORIGIN_URL,'http://localhost:5173'],
+  origin: [`${process.env.CORS_ORIGIN_URL}`,'http://localhost:5173'],
   credentials: true,
 }));
 
