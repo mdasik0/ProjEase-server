@@ -37,6 +37,7 @@ const projectRoutes = (db) => {
           unseen: [],
           mediaFiles: [],
         };
+
         const taskObjInserted = await projectTasksCollection.insertOne(taskObj);
         const chatObjInserted = await chatGroupCollection.insertOne(chatObj);
 
@@ -50,12 +51,15 @@ const projectRoutes = (db) => {
               },
             }
           );
+
           return res.status(200).send({
             success: true,
             message: "Project was successfully created.",
             projectId: response.insertedId,
           });
+
         }
+        
       } else {
         return res.status(500).send({
           success: false,
