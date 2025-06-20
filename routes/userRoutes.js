@@ -28,6 +28,7 @@ const userRoutes = (db) => {
           message: `Welcome back ${userAlreadyExists.name.firstname} ${userAlreadyExists.name.lastname}`,
           userNameExists: userAlreadyExists.name,
           userImageExists: userAlreadyExists.image,
+          userData: userAlreadyExists,
           token,
           refreshToken,
         });
@@ -44,11 +45,17 @@ const userRoutes = (db) => {
       if (result.acknowledged) {
         const token = generateAccessToken({ email: userInfo.email });
         const refreshToken = generateRefreshToken({ email: userInfo.email });
+
+        const newUserData = await usersCollection.findOne({
+          email: userInfo.email,
+        });
+
         return res.status(201).json({
           success: true,
           message: "User created successfully",
           userImageExists: null,
           userNameExists: null,
+          userData: newUserData,
           token,
           refreshToken, // send token
         });
@@ -152,6 +159,7 @@ const userRoutes = (db) => {
             : "Welcome back! Complete your profile to unlock the full experience.",
           userImageExists: result.image,
           userNameExists: result.name,
+          userData: result,
           token: token,
           refreshToken,
         });
