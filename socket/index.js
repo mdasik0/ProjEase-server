@@ -10,7 +10,7 @@ module.exports = (server, db) => {
 
   const io = new Server(server, {
     cors: {
-      origin: process.env.CORS_ORIGIN_URL,
+      origin: [process.env.CORS_ORIGIN_URL, 'http://localhost:5173'],
       methods: ["GET", "POST", "OPTIONS"],
       credentials: true,
     },
